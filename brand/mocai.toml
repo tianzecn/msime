@@ -529,12 +529,12 @@ path = "packages/ui/src/core/brand-logo.tsx"
 find = '''export const msimeEdgeColor = "#A8DF8E";'''
 replace = '''export const msimeEdgeColor = "#E9B44C";'''
 
-# 首次启动的开屏：标志的框和光晕
+# 首次启动的开屏：标志的框和光晕。只改 splashFrame；hSplashFrame 是鸿蒙的开屏，要与鸿蒙的启动图
+# launch_logo.svg 一致（harmony-launch-continuity 检查它们），鸿蒙不在首发范围，两者都留上游原样。
 [[patches]]
 path = "packages/ui/src/account/onboarding-style.ts"
-find = '''fill-[#252525] stroke-[#A8DF8E]'''
-replace = '''fill-[#1E2230] stroke-[#E9B44C]'''
-count = 2
+find = '''export const splashFrame = "fill-[#252525] stroke-[#A8DF8E]'''
+replace = '''export const splashFrame = "fill-[#1E2230] stroke-[#E9B44C]'''
 
 [[patches]]
 path = "packages/ui/src/account/onboarding-style.ts"
