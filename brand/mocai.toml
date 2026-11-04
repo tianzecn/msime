@@ -1,0 +1,428 @@
+# 墨采输入法的品牌配置。规则见 brand/README.md，执行者是 brand/apply.py。
+#
+# 这里的域名和凭据都是占位值：`.invalid` 保证解析不到（RFC 6761），开发版即使开着默认开启的使用统计，
+# 也不会把数据发给某个碰巧拥有这个域名的人。`apply.py audit --release` 在还有占位值时不通过。
+
+[brand]
+id = "mocai"
+placeholder_patterns = ['\.invalid', 'MOCAITEAM0', 'mocai-placeholder']
+
+[values]
+name_zh = "墨采输入法"
+short_zh = "墨采"
+name_en = "Mocai"
+name_en_long = "Mocai IME"
+identifier_root = "app.mocai"
+keychain_root = "app.mocai.keychain"
+url_scheme = "mocai"
+site_host = "mocai.invalid"
+api_host = "api.mocai.invalid"
+media_host = "media.mocai.invalid"
+download_host = "dl.mocai.invalid"
+source_url = "https://mocai.invalid/source"
+release_feed = "https://api.mocai.invalid/v1/releases"
+# 注册 Apple Developer 团队、Google Cloud 项目之后填这三项。
+apple_team_id = "MOCAITEAM0"
+google_ios_client = "mocai-placeholder-ios"
+google_server_client = "mocai-placeholder-server"
+
+[scope]
+# 这些路径不改写：
+# - 许可证和第三方声明必须原样保留（GPL-3.0 第 4、5 条，以及各数据源的署名条款）；
+# - 插件和资源锁带内容哈希，改一个字节校验就过不去，而且写着上游作者是事实；
+# - 引擎等单独发布的库、文档和决策笔记留在上游原样，文档按 brand/README.md 另写。
+exclude = [
+  "LICENSE",
+  "**/LICENSE*",
+  "**/licenses/**",
+  "**/Licenses/**",
+  "**/NOTICE*",
+  "**/*NOTICE*",
+  "**/*-Dependencies.txt",
+  "**/THIRD_PARTY*",
+  "**/*.md",
+  "docs/**",
+  ".agents/**",
+  ".claude/**",
+  ".github/**",
+  ".oss-scanner/**",
+  "develop-docs/**",
+  "brand/**",
+  "scripts/test-brand-layer.py",
+  "resources/**",
+  "plugins/**",
+  "fuzz/**",
+  "tools/**",
+  "crates/engine/**",
+  "crates/engine-capi/**",
+  "crates/engine-wasm/**",
+  "crates/path-trust/**",
+  "crates/script-sdk/**",
+  "crates/script-runtime/**",
+  "crates/pack-tool/**",
+  "crates/backend-engine/**",
+  "crates/dict-builder/**",
+  "crates/clipboard-relay/**",
+  "packages/web-engine/**",
+  "scripts/build-web-engine.sh",
+  "scripts/web-engine-notice.sh",
+  # 它生成 docs/ 下的页面，而 docs/ 不改写；只改生成器，生成结果就对不上了。
+  "scripts/generate_plugin_architecture.py",
+  "**/*.lock",
+  "**/*.lock.json",
+  "pnpm-lock.yaml",
+  "flake.*",
+]
+# resources/ 整体排除，下面这些是其中用户看得到、又不带哈希的文案。
+force_include = ["resources/keyboard-skin-presets.json"]
+
+# ---------- 显示名 ----------
+
+[[rules]]
+id = "中文全称"
+from = "水杉输入法"
+to = "${name_zh}"
+
+[[rules]]
+id = "中文简称"
+from = "水杉"
+to = "${short_zh}"
+
+[[rules]]
+id = "转义的中文简称"
+regex = '\\u6c34\\u6749'
+to = '${short_zh_unicode_escape}'
+
+[[rules]]
+id = "百分号编码的中文简称"
+regex = '%E6%B0%B4%E6%9D%89'
+to = '${short_zh_percent}'
+
+[[rules]]
+id = "英文全称"
+from = "Metasequoia IME"
+to = "${name_en_long}"
+
+[[rules]]
+id = "版本表英文名"
+regex = '"en": "MSIME'
+to = '"en": "${name_en}'
+include = ["shared/contracts/**", "scripts/**", "crates/client-core/**", "**/tests/**"]
+
+[[rules]]
+id = "设置应用产品名"
+regex = '"productName": "MSIME"'
+to = '"productName": "${name_en}"'
+
+[[rules]]
+id = "设置应用包名"
+regex = '\bMSIME\.app\b'
+to = '${name_en}.app'
+
+[[rules]]
+id = "英文账号文案"
+regex = '\bMSIME account\b'
+to = '${name_en} account'
+
+# AI 助手的系统提示词写着产品的别名，用户问起来它会照说。
+[[rules]]
+id = "提示词里的别名"
+from = "（MSIME，"
+to = "（"
+
+[[rules]]
+id = "界面字面量"
+regex = 'Text\("MSIME"\)'
+to = 'Text("${name_en}")'
+
+[[rules]]
+id = "界面引用的英文名"
+from = "「MSIME」"
+to = "「${name_en}」"
+
+[[rules]]
+id = "版本表英文名断言"
+from = 'display_name.en, "MSIME"'
+to = 'display_name.en, "${name_en}"'
+
+[[rules]]
+id = "Homebrew 显示名"
+regex = '(name "|Open )MSIME\b'
+to = '\g<1>${name_en}'
+include = ["platforms/macos/homebrew/**"]
+
+[[rules]]
+id = "InfoPlist 注释里的包名"
+from = "bundle's file name, MSIME,"
+to = "bundle's file name, ${name_en},"
+
+# 崩溃记录和使用统计的目录。和水杉同名的话，两者装在同一台 Mac 上时，墨采的记录会进水杉的上报队列。
+[[rules]]
+id = "版本表检查里的统计目录"
+from = 'f"MSIME/{edition_id}/telemetry"'
+to = 'f"${name_en}/{edition_id}/telemetry"'
+include = ["scripts/test-editions.py"]
+
+[[rules]]
+id = "macOS 崩溃与统计目录"
+regex = '(join\("|"|Support/)MSIME(/telemetry"|/%@/telemetry"|"\)|"$)'
+to = '\g<1>${name_en}\g<2>'
+include = [
+  "apps/desktop/src-tauri/src/platform/desktop/**",
+  "platforms/macos/src/core/EditionIdentity.h",
+  "platforms/macos/tests/**",
+  "scripts/test-editions.py",
+]
+
+# ---------- macOS 与 iOS 的系统身份 ----------
+# Android、Windows、Linux、鸿蒙不在首发范围：Android 的 Java 包名和 JNI 符号也用 app.msime，
+# 只改字符串会让它们编不过。轮到这些平台时再扩这几条规则。
+
+[[rules]]
+id = "输入法 bundle id"
+from = "app.msime.inputmethod.MetasequoiaIME"
+to = "${identifier_root}.inputmethod.MocaiIME"
+
+[[rules]]
+id = "其余 app.msime 标识"
+regex = '(?<![\w-])(group\.)?app\.msime\.(?!android|windows|linux|hmos)'
+to = '\g<1>${identifier_root}.'
+
+# 版本表的 schema 把标识写成正则，点是转义过的，上一条匹配不到。
+[[rules]]
+id = "正则写法的 app.msime 标识"
+regex = 'app(\\+)\.msime\\+\.(?!android|windows|linux|hmos)'
+to = '${identifier_root_regex}\g<1>.'
+
+[[rules]]
+id = "钥匙串服务名"
+from = "com.metasequoia.msime"
+to = "${keychain_root}"
+
+[[rules]]
+id = "iOS URL scheme"
+regex = '\bmsime://'
+to = '${url_scheme}://'
+include = ["platforms/ios/**", "shared/**"]
+
+[[rules]]
+id = "iOS URL scheme 声明"
+regex = '(CFBundleURLSchemes: \[|<string>)msime(\]|</string>)'
+to = '\g<1>${url_scheme}\g<2>'
+include = ["platforms/ios/project.yml", "platforms/ios/App/Resources/Info.plist", "platforms/ios/tests/**"]
+
+[[rules]]
+id = "Apple 团队"
+from = "LXCL4Z68GU"
+to = "${apple_team_id}"
+
+[[rules]]
+id = "Google 登录 iOS 客户端"
+from = "237074057301-dam9p3icuapsr31tv85q35gn4erm1kmt"
+to = "${google_ios_client}"
+
+[[rules]]
+id = "Google 登录服务端客户端"
+from = "237074057301-q5av9h30kspkqnjat4i9hn9oer9ogfpp"
+to = "${google_server_client}"
+
+[[rules]]
+id = "Google 项目号"
+from = "237074057301"
+to = "（墨采的 Google Cloud 项目）"
+
+# ---------- 服务地址 ----------
+
+[[rules]]
+id = "API 主机"
+regex = '\bapi\.msime\.app\b'
+to = "${api_host}"
+
+[[rules]]
+id = "媒体主机"
+regex = '\bmedia\.msime\.app\b'
+to = "${media_host}"
+
+[[rules]]
+id = "下载镜像主机"
+regex = '\bdl\.msime\.app\b'
+to = "${download_host}"
+
+[[rules]]
+id = "官网主机"
+regex = '(?<![\w.-])msime\.app\b'
+to = "${site_host}"
+
+[[rules]]
+id = "更新检查"
+regex = 'https://api\.github\.com/repos/metasequoiaime/msime/releases'
+to = "${release_feed}"
+
+# releases/download 下是按 SHA-256 固定的资源包，继续从上游下载；其余的页面链接换成墨采自己的。
+[[rules]]
+id = "源码与反馈链接"
+regex = 'https://github\.com/metasequoiaime/msime(?![-\w])(?!/releases/download)'
+to = "${source_url}"
+
+# ---------- 定点补丁（在规则之后执行，所以锚点写规则替换后的样子；锚点对不上时 apply 直接失败）----------
+
+# GPL-3.0 第 5 条 a 款：修改版要有醒目声明。上游的版权行保留不动。
+[[patches]]
+path = "packages/ui/src/settings/pages/about-page.tsx"
+find = '''              <Row title="开源许可">
+'''
+replace = '''              <Row title="${name_zh}基于水杉输入法（MSIME）修改，按 GPL-3.0 发布" />
+              <Row title="开源许可">
+'''
+
+[[patches]]
+path = "packages/ui/src/settings/about-hero-section.tsx"
+find = '''<span className={doc.appHeroCopyright}>© 2026 Metasequoia</span>'''
+replace = '''<span className={doc.appHeroCopyright}>© 2026 Metasequoia · 基于水杉输入法（MSIME）修改</span>'''
+
+[[patches]]
+path = "platforms/ios/App/Sources/settings/AboutAndDownloadViews.swift"
+find = '''Text("© 2026 Metasequoia · 输入内容默认只在本机处理")'''
+replace = '''Text("© 2026 Metasequoia · ${name_zh}基于水杉输入法（MSIME）修改，按 GPL-3.0 发布 · 输入内容默认只在本机处理")'''
+
+# 加加辅助码表：部分条目来自商业软件，GPL 不覆盖它的内容（docs/open-source-release.md），墨采不分发。
+# 偏好枚举和云同步下标（MSIMECloudHelpcodeSchemas）故意不动：下标不能变，已有偏好值也要读得出来。
+
+[[patches]]
+path = "crates/engine/src/assets.rs"
+find = '''pub const HELPCODES: [(&str, &str); 7] = ['''
+replace = '''pub const HELPCODES: [(&str, &str); 6] = ['''
+
+[[patches]]
+path = "crates/engine/src/assets.rs"
+find = '''    ("jiajia", "helpcodes/jiajia_helpcode.txt"),
+'''
+replace = ""
+
+[[patches]]
+path = "platforms/macos/stage-resources.sh"
+find = "xiaohe_helpcode.txt jiajia_helpcode.txt wubi86_helpcode.txt"
+replace = "xiaohe_helpcode.txt wubi86_helpcode.txt"
+
+[[patches]]
+path = "platforms/macos/stage-resources.sh"
+find = '''cp "$helpcodes/NOTICE.md" "$destination/helpcodes/NOTICE-jiajia.md"
+'''
+replace = ""
+
+[[patches]]
+path = "platforms/ios/stage-resources.sh"
+find = "xiaohe_helpcode.txt jiajia_helpcode.txt wubi86_helpcode.txt"
+replace = "xiaohe_helpcode.txt wubi86_helpcode.txt"
+
+[[patches]]
+path = "platforms/ios/stage-resources.sh"
+find = '''cp "$helpcodes/NOTICE.md" "$destination/helpcodes/NOTICE-jiajia.md"
+'''
+replace = ""
+
+[[patches]]
+path = "platforms/macos/CMakeLists.txt"
+find = '''configure_file("${CMAKE_CURRENT_SOURCE_DIR}/../../resources/helpcodes/NOTICE.md" "${MSIME_LEGAL_DIRECTORY}/msime-helpcode-jiajia-NOTICE.md" COPYONLY)
+'''
+replace = ""
+
+[[patches]]
+path = "platforms/macos/CMakeLists.txt"
+find = "xiaohe_helpcode.txt jiajia_helpcode.txt wubi86_helpcode.txt"
+replace = "xiaohe_helpcode.txt wubi86_helpcode.txt"
+
+[[patches]]
+path = "platforms/macos/scripts/engine_resources_budget.py"
+find = '''"xiaohe_helpcode.txt", "jiajia_helpcode.txt", "wubi86_helpcode.txt", "ENGINE-NOTICE.md", "NOTICE.md", "NOTICE-wubi86.md",'''
+replace = '''"xiaohe_helpcode.txt", "wubi86_helpcode.txt", "ENGINE-NOTICE.md", "NOTICE-wubi86.md",'''
+
+[[patches]]
+path = "packages/ui/src/settings/helpcode-preferences.ts"
+find = '''  ["jiajia", "加加"],
+'''
+replace = ""
+
+# macOS 回退设置窗口：弹出菜单的项由 HelpcodeSchemas() 逐项映射，标题和列表一起去掉就不会错位。
+[[patches]]
+path = "platforms/macos/src/settings/AppearancePreferences.mm"
+find = '''@"shouyouplus", @"xiaohe", @"jiajia", @"wubi86"]; }'''
+replace = '''@"shouyouplus", @"xiaohe", @"wubi86"]; }'''
+
+[[patches]]
+path = "platforms/macos/src/settings/AppearancePreferences.mm"
+find = '''@"首右plus", @"小鹤", @"加加", @"五笔 86"]];'''
+replace = '''@"首右plus", @"小鹤", @"五笔 86"]];'''
+
+# helpcodeSchemeTitles 按云端下标排列（BackendSettingsView.swift），删一项后面的标题全部错位，所以留着，
+# 墨采不提供这个选项，那一格不会显示。Linux 菜单不在首发范围，轮到 Linux 时连同它的测试一起改。
+[[patches]]
+path = "scripts/test-settings-label-parity.py"
+find = '''    # Every surface offers the same schemes. A surface missing one offers the user fewer schemes
+'''
+replace = '''    # 墨采不分发加加码表：macOS 后端页的标题表按云端下标排列，不能删；Linux 还不在首发范围。其余界面都已去掉。
+    for name in ("the macOS backend page", "the Linux menus"):
+        copies[name].pop("jiajia", None)
+    # Every surface offers the same schemes. A surface missing one offers the user fewer schemes
+'''
+
+[post]
+commands = [
+  ["python3", "platforms/linux/scripts/edition_linux.py", "gen"],
+  ["python3", "platforms/windows/scripts/edition_windows.py", "gen"],
+]
+
+[[patches]]
+path = "platforms/ios/App/Sources/settings/HelpcodeSettingsView.swift"
+find = '''("xiaohe", "小鹤"), ("jiajia", "加加"), ("wubi86", "五笔 86"),'''
+replace = '''("xiaohe", "小鹤"), ("wubi86", "五笔 86"),'''
+
+[remove]
+paths = ["resources/helpcodes/jiajia_helpcode.txt"]
+
+# ---------- 审计：改写后的树里不许再出现 ----------
+
+[[audit]]
+id = "水杉字样"
+regex = '水杉'
+# 只放行 GPL 要求的修改声明。
+allow_line = '基于水杉输入法（MSIME）修改'
+
+[[audit]]
+id = "转义形式的水杉"
+regex = '(?i)\\u6c34\\u6749|\\346\\260\\264\\346\\235\\211|%E6%B0%B4%E6%9D%89'
+
+[[audit]]
+id = "上游服务主机"
+regex = '(?<![\w-])([a-z0-9-]+\.)?msime\.app\b'
+
+[[audit]]
+id = "上游更新检查"
+regex = 'api\.github\.com/repos/metasequoiaime/msime/'
+
+[[audit]]
+id = "上游 macOS 和 iOS 标识"
+regex = '(?<![\w-])app\.msime\.(macos|ios|inputmethod|client|signin)\b|com\.metasequoia'
+
+[[audit]]
+id = "上游 Apple 团队"
+regex = 'LXCL4Z68GU'
+
+[[audit]]
+id = "上游 Google 项目"
+regex = '237074057301'
+
+[[audit]]
+id = "英文全称"
+regex = 'Metasequoia IME'
+
+# ---------- 人工复核：不一定是错，发版前看一遍 ----------
+
+[[review]]
+id = "仍指向上游 GitHub（资源包按 SHA-256 固定，词库更新尚无编译期固定）"
+regex = 'github(usercontent)?\.com/(repos/)?metasequoiaime/'
+
+[[review]]
+id = "独立单词 MSIME（数据目录名等内部名称可以保留，用户看得到的要改）"
+regex = '(?<![\w-])MSIME(?![\w.-])'
+exclude = ["**/tests/**", "**/*[Tt]est*"]
