@@ -19,9 +19,10 @@ site_host = "mocai.invalid"
 api_host = "api.mocai.invalid"
 media_host = "media.mocai.invalid"
 download_host = "dl.mocai.invalid"
-source_url = "https://mocai.invalid/source"
-# 墨采自己发版的 GitHub 仓库。检查更新解析的是 GitHub Releases 接口的 JSON，Sparkle 的 appcast 也挂在它的 release 上。
+# 墨采自己的 GitHub 仓库，源码（GPL 第 6 条要公开）和发版放在一起。检查更新解析的是 GitHub Releases 接口的 JSON，
+# Sparkle 的 appcast 和更新包也挂在它的 release 上。两项要一起改。
 release_repo = "mocai-placeholder/mocai"
+source_url = "https://github.com/mocai-placeholder/mocai"
 # 注册 Apple Developer 团队、Google Cloud 项目之后填这三项。
 apple_team_id = "MOCAITEAM0"
 google_ios_client = "mocai-placeholder-ios"
@@ -278,12 +279,12 @@ id = "更新检查"
 regex = 'https://api\.github\.com/repos/metasequoiaime/msime/releases'
 to = "https://api.github.com/repos/${release_repo}/releases"
 
-# 下一条规则不动 releases/download（按 SHA-256 固定的资源包），但 appcast 不是固定资源：留着上游的地址，
-# 墨采会去读水杉的更新源。
+# 下一条规则不动 releases/download，因为那里大多是按 SHA-256 固定的资源包（onnxruntime-minimal、voice-runtime、
+# ocr-module）。这几个 tag 是墨采自己的发版产物：留着上游地址，墨采会去读水杉的更新源，发版脚本前后也对不上。
 [[rules]]
-id = "Sparkle appcast"
-from = "https://github.com/metasequoiaime/msime/releases/download/macos-appcast/"
-to = "https://github.com/${release_repo}/releases/download/macos-appcast/"
+id = "墨采自己的发版产物"
+regex = 'https://github\.com/metasequoiaime/msime/releases/download/(?=macos-appcast|macos-v|macos-symbols|ios-v|nightly|\$release/)'
+to = "https://github.com/${release_repo}/releases/download/"
 
 [[rules]]
 id = "iOS 的电脑版下载链接"

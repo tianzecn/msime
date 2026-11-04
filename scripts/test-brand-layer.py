@@ -117,7 +117,13 @@ class Rules(unittest.TestCase):
             "https://github.com/metasequoiaime/chinese-ime-lm/releases/download/v1/x",
         ):
             self.assertEqual(rewrite("a", text), text)
-        self.assertEqual(rewrite("a", "https://github.com/metasequoiaime/msime/issues"), "https://mocai.invalid/source/issues")
+        self.assertEqual(rewrite("a", "https://github.com/metasequoiaime/msime/issues"), "https://github.com/mocai-placeholder/mocai/issues")
+        # 墨采自己的发版产物换成墨采的仓库，前后要成套，否则发版脚本对不上。
+        for tag in ("macos-v1.2.0/x.zip", "nightly/x.pkg", "$release/"):
+            self.assertEqual(
+                rewrite("platforms/macos/scripts/x.sh", f"https://github.com/metasequoiaime/msime/releases/download/{tag}"),
+                f"https://github.com/mocai-placeholder/mocai/releases/download/{tag}",
+            )
         # 检查更新解析 GitHub Releases 的 JSON，所以换成墨采自己的仓库，而不是自建后端的某个接口。
         self.assertEqual(
             rewrite("a", "https://api.github.com/repos/metasequoiaime/msime/releases?per_page=100"),
