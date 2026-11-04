@@ -164,15 +164,34 @@ to = 'f"${name_en}/{edition_id}/telemetry"'
 include = ["scripts/test-editions.py"]
 
 [[rules]]
-id = "macOS 崩溃与统计目录"
-regex = '(join\("|"|Support/)MSIME(/telemetry"|/%@/telemetry"|"\)|"$)'
-to = '\g<1>${name_en}\g<2>'
+id = "macOS 崩溃目录（Rust）"
+regex = 'join\("MSIME"\)'
+to = 'join("${name_en}")'
 include = [
   "apps/desktop/src-tauri/src/platform/desktop/**",
+  "crates/mcp-server/src/crash_reporting.rs",
+]
+
+[[rules]]
+id = "macOS 崩溃目录（完整路径）"
+regex = 'Application Support/MSIME'
+to = 'Application Support/${name_en}'
+
+[[rules]]
+id = "macOS 统计目录"
+regex = '"MSIME(/telemetry"|/%@/telemetry"|/[a-z]+/telemetry")'
+to = '"${name_en}\g<1>'
+include = [
   "platforms/macos/src/core/EditionIdentity.h",
   "platforms/macos/tests/**",
   "scripts/test-editions.py",
 ]
+
+[[rules]]
+id = "macOS 崩溃目录（语音助手测试）"
+from = 'support / "MSIME"'
+to = 'support / "${name_en}"'
+include = ["platforms/macos/tests/voice/helper_crash_capture.py"]
 
 # ---------- macOS 与 iOS 的系统身份 ----------
 # Android、Windows、Linux、鸿蒙不在首发范围：Android 的 Java 包名和 JNI 符号也用 app.msime，
@@ -343,6 +362,16 @@ find = '''  ["jiajia", "加加"],
 '''
 replace = ""
 
+[[patches]]
+path = "platforms/macos/tests/input/ShortcutTest.mm"
+find = '''@"shouyouplus", @"xiaohe", @"jiajia", @"wubi86"];'''
+replace = '''@"shouyouplus", @"xiaohe", @"wubi86"];'''
+
+[[patches]]
+path = "platforms/macos/tests/input/ShortcutTest.mm"
+find = '''@"首右plus", @"小鹤", @"加加", @"五笔 86"]]));'''
+replace = '''@"首右plus", @"小鹤", @"五笔 86"]]));'''
+
 # macOS 回退设置窗口：弹出菜单的项由 HelpcodeSchemas() 逐项映射，标题和列表一起去掉就不会错位。
 [[patches]]
 path = "platforms/macos/src/settings/AppearancePreferences.mm"
@@ -415,6 +444,12 @@ regex = '237074057301'
 [[audit]]
 id = "英文全称"
 regex = 'Metasequoia IME'
+
+# 和水杉同名的目录会让两者的崩溃记录和统计混在一起。
+[[audit]]
+id = "与水杉共用的数据目录"
+regex = 'Application Support/MSIME|telemetry_support_directory\(\)\?\.join\("MSIME"\)|support\.join\("MSIME"\)|"MSIME/(%@/)?telemetry"'
+exclude = ["platforms/windows/**", "platforms/linux/**", "platforms/android/**", "platforms/harmony/**"]
 
 # ---------- 人工复核：不一定是错，发版前看一遍 ----------
 

@@ -76,6 +76,19 @@ class Rules(unittest.TestCase):
         self.assertEqual(rewrite("a.json", android), android)
         self.assertEqual(rewrite("a.cpp", "%E6%B0%B4%E6%9D%89+IME"), "%E5%A2%A8%E9%87%87+IME")
 
+    def test_data_directories_do_not_collide_with_upstream(self) -> None:
+        # 共用目录时，墨采的崩溃记录会进水杉的上报队列。这条曾漏掉 msime-mcp。
+        path = "crates/mcp-server/src/crash_reporting.rs"
+        self.assertEqual(
+            rewrite(path, 'telemetry_support_directory()?.join("MSIME");'),
+            'telemetry_support_directory()?.join("Mocai");',
+        )
+        self.assertEqual(rewrite(path, 'join("Library/Application Support/MSIME/telemetry")'), 'join("Library/Application Support/Mocai/telemetry")')
+        self.assertEqual(rewrite("platforms/macos/src/core/EditionIdentity.h", '@"MSIME/%@/telemetry"'), '@"Mocai/%@/telemetry"')
+        # 移动端的相对路径在各自的 App Group 容器里，不会撞车，也不在这条规则的范围内。
+        mobile = 'root.join("MSIME").join("clipboard_history.json")'
+        self.assertEqual(rewrite("crates/host-api/src/ffi/host.rs", mobile), mobile)
+
     def test_internal_names_stay(self) -> None:
         # 类名、C 符号和 crate 名用户看不到，改了只会让每次合并上游都冲突。
         for text in ("MSIMEInputController", "msime_client_create", "msime-host-api", "MSIME_EDITION_FULL"):
