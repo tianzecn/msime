@@ -1,0 +1,5 @@
+<!-- 墨采标志：墨色圆角方块、金边，白色笔画是一滴墨和一道回锋。由 brand/art/generate.py 生成，改图改那个脚本。 -->
+<svg width="110" height="110" viewBox="0 0 110 110" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect x="5" y="5" width="100" height="100" rx="22" fill="#1E2230" stroke="#E9B44C" stroke-width="5"/>
+  <path d="M55 24C61 35 75 48 75 62C75 74 66 83 55 83C44 83 35 74 35 62C35 48 49 35 55 24M47 64C47 70 51 74 57 74" fill="none" stroke="#FFFFFF" stroke-width="8" stroke-linecap="round"/>
+</svg>

@@ -90,6 +90,11 @@ from = "水杉输入法"
 to = "${name_zh}"
 
 [[rules]]
+id = "吉祥物名"
+from = "水杉娘"
+to = "墨墨"
+
+[[rules]]
 id = "中文简称"
 from = "水杉"
 to = "${short_zh}"
@@ -503,3 +508,118 @@ regex = 'github(usercontent)?\.com/(repos/)?metasequoiaime/'
 id = "独立单词 MSIME（数据目录名等内部名称可以保留，用户看得到的要改）"
 regex = '(?<![\w-])MSIME(?![\w.-])'
 exclude = ["**/tests/**", "**/*[Tt]est*"]
+
+# ---------- 标志：代码里画的那几份 ----------
+# 图片由 brand/art/generate.py 生成、经 [assets] 覆盖；这几处是代码里画的标志，换成同一笔画和配色。
+# 坐标由 generate.py 的 STROKE 算出，scripts/test-brand-layer.py 核对这里与它一致：改笔画先改 generate.py，再按它更新这里。
+
+# 共享设置页的 MsimeMark（132 单位画布）
+[[patches]]
+path = "packages/ui/src/core/brand-logo.tsx"
+find = '''"M76.7775 26.4735L38.7872 41.0393L76.7775 51.9637L38.7872 70.1708C74.7026 76.2399 108.462 81.2165 36.7231 104.2335";'''
+replace = '''"M57.8431 28.6335C65.0431 41.8335 81.8431 57.4335 81.8431 74.2335C81.8431 88.6335 71.0431 99.4335 57.8431 99.4335C44.6431 99.4335 33.8431 88.6335 33.8431 74.2335C33.8431 57.4335 50.6431 41.8335 57.8431 28.6335M48.2431 76.6335C48.2431 83.8335 53.0431 88.6335 60.2431 88.6335";'''
+
+[[patches]]
+path = "packages/ui/src/core/brand-logo.tsx"
+find = '''export const msimeFieldColor = "#252525";'''
+replace = '''export const msimeFieldColor = "#1E2230";'''
+
+[[patches]]
+path = "packages/ui/src/core/brand-logo.tsx"
+find = '''export const msimeEdgeColor = "#A8DF8E";'''
+replace = '''export const msimeEdgeColor = "#E9B44C";'''
+
+# 首次启动的开屏：标志的框和光晕
+[[patches]]
+path = "packages/ui/src/account/onboarding-style.ts"
+find = '''fill-[#252525] stroke-[#A8DF8E]'''
+replace = '''fill-[#1E2230] stroke-[#E9B44C]'''
+count = 2
+
+[[patches]]
+path = "packages/ui/src/account/onboarding-style.ts"
+find = '''rgba(127,224,142,0.28)_0%,rgba(127,224,142,0)_65%'''
+replace = '''rgba(233,180,76,0.28)_0%,rgba(233,180,76,0)_65%'''
+
+# 桌面端 Google 登录后浏览器里的回跳页
+[[patches]]
+path = "crates/client-services/src/account/google_callback.html"
+find = '''fill="#252525" stroke="#A8DF8E"'''
+replace = '''fill="#1E2230" stroke="#E9B44C"'''
+
+[[patches]]
+path = "crates/client-services/src/account/google_callback.html"
+find = '''M70.7787 22.2L39.1201 34.3382L70.7787 43.4418L39.1201 58.6144C69.0496 63.672 97.1824 67.8192 37.4 87'''
+replace = '''M55 24C61 35 75 48 75 62C75 74 66 83 55 83C44 83 35 74 35 62C35 48 49 35 55 24M47 64C47 70 51 74 57 74'''
+
+# iOS 的 MSIMELogo（键盘工具栏、皮肤缩略图、设置页）
+[[patches]]
+path = "platforms/ios/SharedUI/core/MSIMELogoShape.swift"
+find = '''    path.move(to: point(76.7775, 26.4735))
+    path.addLine(to: point(38.7872, 41.0393))
+    path.addLine(to: point(76.7775, 51.9637))
+    path.addLine(to: point(38.7872, 70.1708))
+    path.addCurve(to: point(36.7231, 104.2335), control1: point(74.7026, 76.2399), control2: point(108.462, 81.2165))'''
+replace = '''    path.move(to: point(57.8431, 28.6335))
+    path.addCurve(to: point(81.8431, 74.2335), control1: point(65.0431, 41.8335), control2: point(81.8431, 57.4335))
+    path.addCurve(to: point(57.8431, 99.4335), control1: point(81.8431, 88.6335), control2: point(71.0431, 99.4335))
+    path.addCurve(to: point(33.8431, 74.2335), control1: point(44.6431, 99.4335), control2: point(33.8431, 88.6335))
+    path.addCurve(to: point(57.8431, 28.6335), control1: point(33.8431, 57.4335), control2: point(50.6431, 41.8335))
+    path.move(to: point(48.2431, 76.6335))
+    path.addCurve(to: point(60.2431, 88.6335), control1: point(48.2431, 83.8335), control2: point(53.0431, 88.6335))'''
+
+[[patches]]
+path = "platforms/ios/SharedUI/core/MSIMELogoShape.swift"
+find = '''UIColor(red: 0x25 / 255.0, green: 0x25 / 255.0, blue: 0x25 / 255.0, alpha: 1)'''
+replace = '''UIColor(red: 0x1E / 255.0, green: 0x22 / 255.0, blue: 0x30 / 255.0, alpha: 1)'''
+
+[[patches]]
+path = "platforms/ios/SharedUI/core/MSIMELogoShape.swift"
+find = '''UIColor(red: 0xA8 / 255.0, green: 0xDF / 255.0, blue: 0x8E / 255.0, alpha: 1)'''
+replace = '''UIColor(red: 0xE9 / 255.0, green: 0xB4 / 255.0, blue: 0x4C / 255.0, alpha: 1)'''
+
+# macOS 悬浮工具栏左端的小标志
+[[patches]]
+path = "platforms/macos/src/core/FloatingToolbarPanel.mm"
+find = '''    NSBezierPath *stroke = [NSBezierPath bezierPath];
+    [stroke moveToPoint:NSMakePoint(NSMinX(mark) + side * 0.68, NSMinY(mark) + side * 0.88)];
+    [stroke lineToPoint:NSMakePoint(NSMinX(mark) + side * 0.28, NSMinY(mark) + side * 0.73)];
+    [stroke lineToPoint:NSMakePoint(NSMinX(mark) + side * 0.68, NSMinY(mark) + side * 0.62)];
+    [stroke lineToPoint:NSMakePoint(NSMinX(mark) + side * 0.28, NSMinY(mark) + side * 0.44)];
+    [stroke curveToPoint:NSMakePoint(NSMinX(mark) + side * 0.25, NSMinY(mark) + side * 0.16)
+           controlPoint1:NSMakePoint(NSMinX(mark) + side * 0.68, NSMinY(mark) + side * 0.38)
+           controlPoint2:NSMakePoint(NSMinX(mark) + side * 0.42, NSMinY(mark) + side * 0.25)];'''
+replace = '''    NSBezierPath *stroke = [NSBezierPath bezierPath];
+    [stroke moveToPoint:NSMakePoint(NSMinX(mark) + side * 0.500, NSMinY(mark) + side * 0.810)];
+    [stroke curveToPoint:NSMakePoint(NSMinX(mark) + side * 0.700, NSMinY(mark) + side * 0.430)
+           controlPoint1:NSMakePoint(NSMinX(mark) + side * 0.560, NSMinY(mark) + side * 0.700)
+           controlPoint2:NSMakePoint(NSMinX(mark) + side * 0.700, NSMinY(mark) + side * 0.570)];
+    [stroke curveToPoint:NSMakePoint(NSMinX(mark) + side * 0.500, NSMinY(mark) + side * 0.220)
+           controlPoint1:NSMakePoint(NSMinX(mark) + side * 0.700, NSMinY(mark) + side * 0.310)
+           controlPoint2:NSMakePoint(NSMinX(mark) + side * 0.610, NSMinY(mark) + side * 0.220)];
+    [stroke curveToPoint:NSMakePoint(NSMinX(mark) + side * 0.300, NSMinY(mark) + side * 0.430)
+           controlPoint1:NSMakePoint(NSMinX(mark) + side * 0.390, NSMinY(mark) + side * 0.220)
+           controlPoint2:NSMakePoint(NSMinX(mark) + side * 0.300, NSMinY(mark) + side * 0.310)];
+    [stroke curveToPoint:NSMakePoint(NSMinX(mark) + side * 0.500, NSMinY(mark) + side * 0.810)
+           controlPoint1:NSMakePoint(NSMinX(mark) + side * 0.300, NSMinY(mark) + side * 0.570)
+           controlPoint2:NSMakePoint(NSMinX(mark) + side * 0.440, NSMinY(mark) + side * 0.700)];
+    [stroke moveToPoint:NSMakePoint(NSMinX(mark) + side * 0.420, NSMinY(mark) + side * 0.410)];
+    [stroke curveToPoint:NSMakePoint(NSMinX(mark) + side * 0.520, NSMinY(mark) + side * 0.310)
+           controlPoint1:NSMakePoint(NSMinX(mark) + side * 0.420, NSMinY(mark) + side * 0.350)
+           controlPoint2:NSMakePoint(NSMinX(mark) + side * 0.460, NSMinY(mark) + side * 0.310)];'''
+
+[[patches]]
+path = "platforms/macos/src/core/FloatingToolbarPanel.mm"
+find = '''colorWithSRGBRed:0x25 / 255.0 green:0x25 / 255.0 blue:0x25 / 255.0'''
+replace = '''colorWithSRGBRed:0x1E / 255.0 green:0x22 / 255.0 blue:0x30 / 255.0'''
+
+[[patches]]
+path = "platforms/macos/src/core/FloatingToolbarPanel.mm"
+find = '''colorWithSRGBRed:0xA8 / 255.0 green:0xDF / 255.0 blue:0x8E / 255.0'''
+replace = '''colorWithSRGBRed:0xE9 / 255.0 green:0xB4 / 255.0 blue:0x4C / 255.0'''
+
+
+# brand/assets/ 下的每个文件按同样的相对路径覆盖改写树里的上游文件，目标必须已经存在。
+# 这些图由 brand/art/generate.py 生成，改图改那个脚本再重新生成，不要手改图片。
+[assets]
+root = "brand/assets"

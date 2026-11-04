@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- 输入菜单的通用图标：墨采标志的单色模板图。由 brand/art/generate.py 生成，同时写出 MSIMEClientInputMethodMenuIcon.tiff。 -->
+<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="-1.0 -1.0 112.0 112.0">
+  <title>墨采输入法 input menu icon</title>
+  <defs>
+    <mask id="stroke">
+      <rect x="2.5" y="2.5" width="105" height="105" rx="24.5" fill="#fff"/>
+      <path d="M55 24C61 35 75 48 75 62C75 74 66 83 55 83C44 83 35 74 35 62C35 48 49 35 55 24M47 64C47 70 51 74 57 74" fill="none" stroke="#000" stroke-linecap="round" stroke-width="9"/>
+    </mask>
+  </defs>
+  <rect x="2.5" y="2.5" width="105" height="105" rx="24.5" fill="#000" mask="url(#stroke)"/>
+</svg>

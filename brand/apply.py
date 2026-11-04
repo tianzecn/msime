@@ -22,6 +22,7 @@ import fnmatch
 import json
 import pathlib
 import re
+import shutil
 import subprocess
 import sys
 import tomllib
@@ -112,6 +113,8 @@ class Config:
     patches: list[Patch]
     remove: list[str]
     post_commands: list[list[str]]
+    # brand/assets 这样的目录：里面每个文件按相同的相对路径覆盖上游文件
+    assets_root: pathlib.Path | None
     audit: list[AuditCheck]
     release_audit: list[AuditCheck]
     review: list[AuditCheck]
@@ -173,6 +176,7 @@ def load_config(path: pathlib.Path) -> Config:
         patches=patches,
         remove=raw.get("remove", {}).get("paths", []),
         post_commands=raw.get("post", {}).get("commands", []),
+        assets_root=(path.resolve().parent.parent / raw["assets"]["root"]) if "assets" in raw else None,
         audit=checks("audit"),
         release_audit=checks("release_audit"),
         review=checks("review"),
@@ -244,7 +248,22 @@ def prepare(root: pathlib.Path, config: Config) -> tuple[dict[str, str], dict[st
     for relative in config.remove:
         if not (root / relative).is_file():
             raise BrandError(f"要删除的文件不存在：{relative}")
+    tracked = set(tracked_files(root))
+    for relative in asset_files(config):
+        if relative not in tracked:
+            raise BrandError(f"要覆盖的上游文件不存在：{relative}（上游可能改名或删了它，brand/assets 里的这张图要跟着挪）")
     return rewritten, counts
+
+
+def asset_files(config: Config) -> list[str]:
+    """brand/assets 下每个文件相对它的路径，也就是它要覆盖的上游路径。"""
+    if config.assets_root is None or not config.assets_root.is_dir():
+        return []
+    return sorted(
+        path.relative_to(config.assets_root).as_posix()
+        for path in config.assets_root.rglob("*")
+        if path.is_file() and not path.name.startswith(".")
+    )
 
 
 def command_plan(root: pathlib.Path, config: Config) -> int:
@@ -253,6 +272,7 @@ def command_plan(root: pathlib.Path, config: Config) -> int:
         print(f"{counts.get(rule.id, 0):>7}  {rule.id}")
     print(f"{len(rewritten):>7}  个文件会被改写")
     print(f"{len(config.patches):>7}  处定点补丁（锚点全部对得上），{len(config.remove)} 个文件会被删除")
+    print(f"{len(asset_files(config)):>7}  张图会覆盖上游（目标全部存在）")
     return 0
 
 
@@ -275,6 +295,10 @@ def command_apply(root: pathlib.Path, config: Config, config_path: pathlib.Path)
             (root / relative).write_bytes(text.encode("utf-8"))
     for relative in config.remove:
         (root / relative).unlink()
+    # 图片在规则和补丁之后覆盖，覆盖的是原样的字节。
+    assets = asset_files(config)
+    for relative in assets:
+        shutil.copyfile(config.assets_root / relative, root / relative)
     # 生成文件里的名字是转义过的，文本规则替换不到，按改写后的版本表重新生成。
     for command in config.post_commands:
         result = subprocess.run(command, cwd=root, capture_output=True, text=True, check=False)
@@ -288,6 +312,7 @@ def command_apply(root: pathlib.Path, config: Config, config_path: pathlib.Path)
                 "rewritten_files": len(rewritten),
                 "rule_hits": counts,
                 "removed": config.remove,
+                "assets": len(assets),
             },
             ensure_ascii=False,
             indent=2,
@@ -295,7 +320,7 @@ def command_apply(root: pathlib.Path, config: Config, config_path: pathlib.Path)
         + "\n",
         encoding="utf-8",
     )
-    print(f"已改写 {len(rewritten)} 个文件，删除 {len(config.remove)} 个文件")
+    print(f"已改写 {len(rewritten)} 个文件，删除 {len(config.remove)} 个文件，覆盖 {len(assets)} 张图")
     return 0
 
 

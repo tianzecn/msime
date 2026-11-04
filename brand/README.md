@@ -67,6 +67,20 @@ python3 scripts/test-brand-layer.py
 rm -P ~/Desktop/mocai-sparkle-key.txt
 ```
 
+## 图片
+
+标志、各平台图标、吉祥物「墨墨」和 66 张表情贴纸都由 [art/generate.py](art/generate.py) 用代码画成 SVG，再用 librsvg 渲染，输出到 `brand/assets/`。目录结构与上游一一对应，`apply` 在规则和补丁之后按相同路径覆盖上游文件。
+
+```sh
+brew install librsvg webp
+python3 brand/art/generate.py --sheet /tmp/mocai-art   # 重新生成全部图片，另出三张对照图便于目检
+```
+
+- 标志：墨色圆角方块、金边，白色笔画是一滴墨和一道回锋。iOS 的四个备选图标只换边色。
+- 代码里画的标志（共享设置页的 `MsimeMark`、iOS 的 `MSIMELogo`、macOS 悬浮工具栏、开屏、Google 登录回跳页）由 `mocai.toml` 的补丁换成同一组坐标。坐标由 `generate.py` 算出，测试核对两边一致。改笔画先改 `generate.py`，再更新这几处补丁。
+- 贴纸上的字用霞鹜文楷（SIL OFL 1.1），只在生成时用，不随应用分发。字体放在 `MOCAI_FONT_DIR`，缺省 `~/worktrees/mocai-deps/fonts`。
+- 这一套是矢量画法，比上游的插画简单。以后换成插画师或图像模型出的图，按 `brand/assets/` 里的文件名和尺寸替换就行，`apply` 不用改。
+
 ## GPL 义务
 
 - 修改声明：关于页面写着「基于水杉输入法（MSIME）修改」（第 5 条 a 款），上游的版权行保留。

@@ -8,7 +8,9 @@
 from __future__ import annotations
 
 import importlib.util
+import json
 import pathlib
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -64,6 +66,8 @@ def detach(directory: pathlib.Path) -> None:
 class Rules(unittest.TestCase):
     def test_display_names(self) -> None:
         self.assertEqual(rewrite("a.swift", "水杉输入法"), "墨采输入法")
+        # 吉祥物换成了墨墨，不是「墨采娘」
+        self.assertEqual(rewrite("a.tsx", "水杉娘插画"), "墨墨插画")
         self.assertEqual(rewrite("a.swift", "水杉账号"), "墨采账号")
         self.assertEqual(rewrite("a.plist", "Metasequoia IME"), "Mocai IME")
         self.assertEqual(rewrite("a.ts", "（MSIME，Metasequoia IME）"), "（Mocai IME）")
@@ -163,6 +167,7 @@ class Tree(unittest.TestCase):
         self.config.patches = []
         self.config.remove = []
         self.config.post_commands = []
+        self.config.assets_root = None
 
     def tearDown(self) -> None:
         self.holder.cleanup()
@@ -216,12 +221,61 @@ class Tree(unittest.TestCase):
         self.assertIn("c.txt", hits["水杉字样"][0])
         self.assertEqual(len(hits["上游服务主机"]), 1)
 
+    def test_assets_replace_upstream_bytes_and_need_a_target(self) -> None:
+        repository(self.root, {"art/icon.svg": "<svg>水杉</svg>\n"})
+        (self.root / "art/logo.png").write_bytes(b"\x89PNG upstream")
+        subprocess.run(["git", "-C", str(self.root), "add", "-A"], check=True)
+        subprocess.run(["git", "-C", str(self.root), "commit", "-qm", "png"], check=True)
+        detach(self.root)
+        assets = self.root.parent / f"{self.root.name}-assets"
+        (assets / "art").mkdir(parents=True)
+        (assets / "art/logo.png").write_bytes(b"\x89PNG mocai")
+        (assets / "art/missing.png").write_bytes(b"x")
+        self.config.assets_root = assets
+        try:
+            with self.assertRaisesRegex(brand.BrandError, "missing.png"):
+                brand.command_apply(self.root, self.config, BRAND / "mocai.toml")
+            self.assertEqual((self.root / "art/logo.png").read_bytes(), b"\x89PNG upstream")
+            (assets / "art/missing.png").unlink()
+            brand.command_apply(self.root, self.config, BRAND / "mocai.toml")
+            self.assertEqual((self.root / "art/logo.png").read_bytes(), b"\x89PNG mocai")
+            self.assertEqual((self.root / "art/icon.svg").read_text(encoding="utf-8"), "<svg>墨采</svg>\n")
+        finally:
+            shutil.rmtree(assets)
+
     def test_release_audit_rejects_placeholders(self) -> None:
         repository(self.root, {"a.txt": "ok\n"})
         detach(self.root)
         brand.command_apply(self.root, self.config, BRAND / "mocai.toml")
         self.assertEqual(brand.command_audit(self.root, self.config, False, 0), 0)
         self.assertEqual(brand.command_audit(self.root, self.config, True, 0), 1)
+
+
+class Artwork(unittest.TestCase):
+    """代码里画的标志由补丁换成 brand/art/generate.py 的笔画，两边要是同一组坐标。"""
+
+    @classmethod
+    def setUpClass(cls) -> None:
+        spec = importlib.util.spec_from_file_location("brand_art", BRAND / "art/generate.py")
+        cls.art = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(cls.art)
+        cls.replaced = "\n".join(patch.replace for patch in CONFIG.patches)
+
+    def test_code_drawn_marks_use_the_generated_stroke(self) -> None:
+        for text in (self.art.STROKE_D, self.art.STROKE_D_132, self.art.swift_stroke_body(), self.art.appkit_stroke_body()):
+            self.assertIn(text, self.replaced)
+
+    def test_code_drawn_marks_use_the_generated_colours(self) -> None:
+        for colour in (self.art.FIELD, self.art.EDGE):
+            self.assertIn(colour, self.replaced)
+            self.assertIn(self.art.hex_channels(colour, "0x{r} / 255.0, green: 0x{g} / 255.0, blue: 0x{b} / 255.0"), self.replaced)
+
+    def test_every_sticker_has_a_file(self) -> None:
+        stickers = CONFIG.assets_root / "resources/stickers/shuishan"
+        manifest = json.loads((stickers / "manifest.json").read_text(encoding="utf-8"))
+        self.assertEqual(len(manifest["stickers"]), len(self.art.STICKERS))
+        for entry in manifest["stickers"]:
+            self.assertTrue((stickers / entry["file"]).is_file(), entry)
 
 
 class CurrentTree(unittest.TestCase):
