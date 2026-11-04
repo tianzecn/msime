@@ -41,16 +41,31 @@ python3 scripts/test-brand-layer.py
 | 许可证、第三方声明、哈希锁定的资源和插件 | 不动，GPL 和各数据源的条款要求保留，改了校验也过不去 |
 | 按 SHA-256 固定的资源包下载（`releases/download`） | 仍从上游下载 |
 
-## 上线前要换掉的占位值
+## 取值
 
-`brand/mocai.toml` 的 `[values]` 里，`.invalid` 域名保证解析不到，开发版不会把默认开启的使用统计发给别人。
+`brand/mocai.toml` 的 `[values]`：
 
-- 域名：`site_host`、`api_host`、`media_host`、`download_host`、`source_url`
-- 发版仓库：`release_repo`。检查更新读它的 GitHub Releases，Sparkle 的 appcast 挂在它的 `macos-appcast` release 上
-- Sparkle 公钥：用 Sparkle 的 `generate_keys` 生成墨采自己的一对，公钥写进 `platforms/macos/sparkle-public-key.txt`（在品牌层分支上直接改这个文件），私钥只放发版环境
-- 产品标识：`identifier_root`、`keychain_root`。首个正式版发布后再改，用户就要重装
+| 项 | 取值 |
+| --- | --- |
+| 官网和服务 | `mocai.wangpisi.com`；后端 `api.`、头像 `media.`、可选的下载镜像 `dl.`，都在它下面 |
+| 产品标识 | `com.wangpisi.mocai`（iOS 是 `com.wangpisi.mocai.ios`）。首个正式版发布后不能再改，用户要重装 |
+| 源码和发版仓库 | `tianzecn/msime`。检查更新读它的 GitHub Releases，Sparkle 的 appcast 挂在它的 `macos-appcast` release 上 |
+| Sparkle 公钥 | `sparkle_public_key`，由补丁写进 `platforms/macos/sparkle-public-key.txt` |
+
+还是占位值、`audit --release` 不让过的：
+
 - Apple 团队：`apple_team_id`
 - Google 登录：`google_ios_client`、`google_server_client`
+
+### Sparkle 私钥
+
+私钥在维护者登录钥匙串里，账户名 `mocai-ime`，另存在仓库 Secret `SPARKLE_ED_PRIVATE_KEY`（GitHub 只写不读）。丢了它，已经装好的墨采就再也收不到更新，所以要另备一份：
+
+```sh
+~/worktrees/mocai-deps/Sparkle-2.9.6/bin/generate_keys --account mocai-ime -x ~/Desktop/mocai-sparkle-key.txt
+# 存进密码管理器，再删掉这个文件
+rm -P ~/Desktop/mocai-sparkle-key.txt
+```
 
 ## GPL 义务
 

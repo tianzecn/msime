@@ -1,7 +1,6 @@
 # 墨采输入法的品牌配置。规则见 brand/README.md，执行者是 brand/apply.py。
 #
-# 这里的域名和凭据都是占位值：`.invalid` 保证解析不到（RFC 6761），开发版即使开着默认开启的使用统计，
-# 也不会把数据发给某个碰巧拥有这个域名的人。`apply.py audit --release` 在还有占位值时不通过。
+# Apple 团队和 Google 登录还是占位值，`apply.py audit --release` 在还有占位值时不通过。
 
 [brand]
 id = "mocai"
@@ -12,17 +11,22 @@ name_zh = "墨采输入法"
 short_zh = "墨采"
 name_en = "Mocai"
 name_en_long = "Mocai IME"
-identifier_root = "app.mocai"
-keychain_root = "app.mocai.keychain"
+# 标识是域名 mocai.wangpisi.com 倒写。首个正式版发布后不能再改：系统按它认应用，改了用户要重装、设置要重配。
+identifier_root = "com.wangpisi.mocai"
+keychain_root = "com.wangpisi.mocai.keychain"
 url_scheme = "mocai"
-site_host = "mocai.invalid"
-api_host = "api.mocai.invalid"
-media_host = "media.mocai.invalid"
-download_host = "dl.mocai.invalid"
+site_host = "mocai.wangpisi.com"
+# 自建 msime-cloud 的地址；media 放头像（R2 或 S3 的自定义域名），dl 是可选的下载镜像，没部署时客户端退回 GitHub 原地址。
+api_host = "api.mocai.wangpisi.com"
+media_host = "media.mocai.wangpisi.com"
+download_host = "dl.mocai.wangpisi.com"
 # 墨采自己的 GitHub 仓库，源码（GPL 第 6 条要公开）和发版放在一起。检查更新解析的是 GitHub Releases 接口的 JSON，
 # Sparkle 的 appcast 和更新包也挂在它的 release 上。两项要一起改。
-release_repo = "mocai-placeholder/mocai"
-source_url = "https://github.com/mocai-placeholder/mocai"
+release_repo = "tianzecn/msime"
+source_url = "https://github.com/tianzecn/msime"
+# 2026-11-04 生成，私钥在维护者登录钥匙串的 mocai-ime 账户和仓库 Secret SPARKLE_ED_PRIVATE_KEY 里。
+# 换掉它，已安装的墨采就再也收不到更新，所以私钥要另存一份备份。
+sparkle_public_key = "L1eCCUHdvbXhcy+92fi9KKNPCKZJf+coMbbnCOVeD3M="
 # 注册 Apple Developer 团队、Google Cloud 项目之后填这三项。
 apple_team_id = "MOCAITEAM0"
 google_ios_client = "mocai-placeholder-ios"
@@ -426,6 +430,11 @@ commands = [
 path = "platforms/ios/App/Sources/settings/HelpcodeSettingsView.swift"
 find = '''("xiaohe", "小鹤"), ("jiajia", "加加"), ("wubi86", "五笔 86"),'''
 replace = '''("xiaohe", "小鹤"), ("wubi86", "五笔 86"),'''
+
+[[patches]]
+path = "platforms/macos/sparkle-public-key.txt"
+find = "nbQCVPlpQU41gXudWsKCjnVrB32GbdcukhMlEIlxujo="
+replace = "${sparkle_public_key}"
 
 [remove]
 paths = ["resources/helpcodes/jiajia_helpcode.txt"]

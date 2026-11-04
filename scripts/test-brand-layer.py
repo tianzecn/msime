@@ -31,6 +31,10 @@ sys.modules["brand_apply"] = brand
 spec.loader.exec_module(brand)
 
 CONFIG = brand.load_config(BRAND / "mocai.toml")
+# 期望值从配置读，改域名、仓库或标识时测试不用跟着改。
+V = CONFIG.values
+ID = V["identifier_root"]
+REPO = V["release_repo"]
 
 
 def rewrite(relative: str, text: str) -> str:
@@ -68,10 +72,10 @@ class Rules(unittest.TestCase):
         self.assertEqual(rewrite("a.ts", r'"水杉"'), r'"墨采"')
         self.assertEqual(
             rewrite("shared/contracts/editions.schema.json", r'"^app\.msime\.macos(\.[a-z]+)?$"'),
-            r'"^app\.mocai\.macos(\.[a-z]+)?$"',
+            '"^' + ID.replace(".", "\\.") + r'\.macos(\.[a-z]+)?$"',
         )
         # JSON 里的正则是两个反斜杠，反斜杠的数量要原样留着。
-        self.assertEqual(rewrite("a.json", r'"^app\\.msime\\.macos$"'), r'"^app\\.mocai\\.macos$"')
+        self.assertEqual(rewrite("a.json", r'"^app\\.msime\\.macos$"'), '"^' + ID.replace(".", "\\\\.") + r'\\.macos$"')
         android = r'"^app\\.msime\\.android(\\.[a-z]+)?$"'
         self.assertEqual(rewrite("a.json", android), android)
         self.assertEqual(rewrite("a.cpp", "%E6%B0%B4%E6%9D%89+IME"), "%E5%A2%A8%E9%87%87+IME")
@@ -95,18 +99,18 @@ class Rules(unittest.TestCase):
             self.assertEqual(rewrite("a.mm", text), text)
 
     def test_identifiers_only_for_shipping_platforms(self) -> None:
-        self.assertEqual(rewrite("a", "app.msime.macos"), "app.mocai.macos")
-        self.assertEqual(rewrite("a", "group.app.msime.ios"), "group.app.mocai.ios")
-        self.assertEqual(rewrite("a", "app.msime.inputmethod.MetasequoiaIME.Hans"), "app.mocai.inputmethod.MocaiIME.Hans")
+        self.assertEqual(rewrite("a", "app.msime.macos"), f"{ID}.macos")
+        self.assertEqual(rewrite("a", "group.app.msime.ios"), f"group.{ID}.ios")
+        self.assertEqual(rewrite("a", "app.msime.inputmethod.MetasequoiaIME.Hans"), f"{ID}.inputmethod.MocaiIME.Hans")
         # Android 的 Java 包名和 JNI 符号也用它，只换字符串会编不过；这几个平台还不在首发范围。
         for text in ("app.msime.android", "app.msime.windows", "app.msime.linux", "app.msime.hmos"):
             self.assertEqual(rewrite("a", text), text)
 
-    def test_services_never_point_at_a_real_placeholder_host(self) -> None:
-        self.assertEqual(rewrite("a", "https://api.msime.app/v1"), "https://api.mocai.invalid/v1")
-        self.assertEqual(rewrite("a", "media.msime.app"), "media.mocai.invalid")
-        self.assertEqual(rewrite("a", "https://dl.msime.app/gh/"), "https://dl.mocai.invalid/gh/")
-        self.assertEqual(rewrite("a", "https://msime.app/privacy/"), "https://mocai.invalid/privacy/")
+    def test_services_point_at_mocai(self) -> None:
+        self.assertEqual(rewrite("a", "https://api.msime.app/v1"), f"https://{V['api_host']}/v1")
+        self.assertEqual(rewrite("a", "media.msime.app"), V["media_host"])
+        self.assertEqual(rewrite("a", "https://dl.msime.app/gh/"), f"https://{V['download_host']}/gh/")
+        self.assertEqual(rewrite("a", "https://msime.app/privacy/"), f"https://{V['site_host']}/privacy/")
         self.assertEqual(rewrite("a", "msime-tests.invalid"), "msime-tests.invalid")
 
     def test_pinned_resources_stay_upstream(self) -> None:
@@ -117,22 +121,22 @@ class Rules(unittest.TestCase):
             "https://github.com/metasequoiaime/chinese-ime-lm/releases/download/v1/x",
         ):
             self.assertEqual(rewrite("a", text), text)
-        self.assertEqual(rewrite("a", "https://github.com/metasequoiaime/msime/issues"), "https://github.com/mocai-placeholder/mocai/issues")
+        self.assertEqual(rewrite("a", "https://github.com/metasequoiaime/msime/issues"), f"{V['source_url']}/issues")
         # 墨采自己的发版产物换成墨采的仓库，前后要成套，否则发版脚本对不上。
         for tag in ("macos-v1.2.0/x.zip", "nightly/x.pkg", "$release/"):
             self.assertEqual(
                 rewrite("platforms/macos/scripts/x.sh", f"https://github.com/metasequoiaime/msime/releases/download/{tag}"),
-                f"https://github.com/mocai-placeholder/mocai/releases/download/{tag}",
+                f"https://github.com/{REPO}/releases/download/{tag}",
             )
         # 检查更新解析 GitHub Releases 的 JSON，所以换成墨采自己的仓库，而不是自建后端的某个接口。
         self.assertEqual(
             rewrite("a", "https://api.github.com/repos/metasequoiaime/msime/releases?per_page=100"),
-            "https://api.github.com/repos/mocai-placeholder/mocai/releases?per_page=100",
+            f"https://api.github.com/repos/{REPO}/releases?per_page=100",
         )
         # appcast 也在 releases/download 下，但它不是固定资源，留着就会读水杉的更新源。
         self.assertEqual(
             rewrite("platforms/macos/package-release.sh", "https://github.com/metasequoiaime/msime/releases/download/macos-appcast/"),
-            "https://github.com/mocai-placeholder/mocai/releases/download/macos-appcast/",
+            f"https://github.com/{REPO}/releases/download/macos-appcast/",
         )
 
     def test_notices_are_out_of_scope(self) -> None:
