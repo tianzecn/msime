@@ -113,6 +113,7 @@ class Config:
     remove: list[str]
     post_commands: list[list[str]]
     audit: list[AuditCheck]
+    release_audit: list[AuditCheck]
     review: list[AuditCheck]
     placeholder: list[re.Pattern[str]]
 
@@ -173,6 +174,7 @@ def load_config(path: pathlib.Path) -> Config:
         remove=raw.get("remove", {}).get("paths", []),
         post_commands=raw.get("post", {}).get("commands", []),
         audit=checks("audit"),
+        release_audit=checks("release_audit"),
         review=checks("review"),
         placeholder=[re.compile(item) for item in raw["brand"]["placeholder_patterns"]],
     )
@@ -332,6 +334,10 @@ def command_audit(root: pathlib.Path, config: Config, release: bool, limit: int)
     print("人工复核（不算失败）：")
     print_hits(run_checks(root, config, config.review), limit)
     if release:
+        print("发版前必须为零：")
+        release_hits = run_checks(root, config, config.release_audit)
+        print_hits(release_hits, limit)
+        failed = failed or any(release_hits.values())
         problems = [
             f"{key} = {value}"
             for key, value in config.values.items()

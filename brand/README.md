@@ -45,7 +45,9 @@ python3 scripts/test-brand-layer.py
 
 `brand/mocai.toml` 的 `[values]` 里，`.invalid` 域名保证解析不到，开发版不会把默认开启的使用统计发给别人。
 
-- 域名：`site_host`、`api_host`、`media_host`、`download_host`、`source_url`、`release_feed`
+- 域名：`site_host`、`api_host`、`media_host`、`download_host`、`source_url`
+- 发版仓库：`release_repo`。检查更新读它的 GitHub Releases，Sparkle 的 appcast 挂在它的 `macos-appcast` release 上
+- Sparkle 公钥：用 Sparkle 的 `generate_keys` 生成墨采自己的一对，公钥写进 `platforms/macos/sparkle-public-key.txt`（在品牌层分支上直接改这个文件），私钥只放发版环境
 - 产品标识：`identifier_root`、`keychain_root`。首个正式版发布后再改，用户就要重装
 - Apple 团队：`apple_team_id`
 - Google 登录：`google_ios_client`、`google_server_client`

@@ -118,9 +118,15 @@ class Rules(unittest.TestCase):
         ):
             self.assertEqual(rewrite("a", text), text)
         self.assertEqual(rewrite("a", "https://github.com/metasequoiaime/msime/issues"), "https://mocai.invalid/source/issues")
+        # 检查更新解析 GitHub Releases 的 JSON，所以换成墨采自己的仓库，而不是自建后端的某个接口。
         self.assertEqual(
             rewrite("a", "https://api.github.com/repos/metasequoiaime/msime/releases?per_page=100"),
-            "https://api.mocai.invalid/v1/releases?per_page=100",
+            "https://api.github.com/repos/mocai-placeholder/mocai/releases?per_page=100",
+        )
+        # appcast 也在 releases/download 下，但它不是固定资源，留着就会读水杉的更新源。
+        self.assertEqual(
+            rewrite("platforms/macos/package-release.sh", "https://github.com/metasequoiaime/msime/releases/download/macos-appcast/"),
+            "https://github.com/mocai-placeholder/mocai/releases/download/macos-appcast/",
         )
 
     def test_notices_are_out_of_scope(self) -> None:

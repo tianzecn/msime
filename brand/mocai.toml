@@ -20,7 +20,8 @@ api_host = "api.mocai.invalid"
 media_host = "media.mocai.invalid"
 download_host = "dl.mocai.invalid"
 source_url = "https://mocai.invalid/source"
-release_feed = "https://api.mocai.invalid/v1/releases"
+# 墨采自己发版的 GitHub 仓库。检查更新解析的是 GitHub Releases 接口的 JSON，Sparkle 的 appcast 也挂在它的 release 上。
+release_repo = "mocai-placeholder/mocai"
 # 注册 Apple Developer 团队、Google Cloud 项目之后填这三项。
 apple_team_id = "MOCAITEAM0"
 google_ios_client = "mocai-placeholder-ios"
@@ -275,7 +276,19 @@ to = "${site_host}"
 [[rules]]
 id = "更新检查"
 regex = 'https://api\.github\.com/repos/metasequoiaime/msime/releases'
-to = "${release_feed}"
+to = "https://api.github.com/repos/${release_repo}/releases"
+
+# 下一条规则不动 releases/download（按 SHA-256 固定的资源包），但 appcast 不是固定资源：留着上游的地址，
+# 墨采会去读水杉的更新源。
+[[rules]]
+id = "Sparkle appcast"
+from = "https://github.com/metasequoiaime/msime/releases/download/macos-appcast/"
+to = "https://github.com/${release_repo}/releases/download/macos-appcast/"
+
+[[rules]]
+id = "iOS 的电脑版下载链接"
+from = 'https://github.com/metasequoiaime/\(repository)/releases'
+to = "https://github.com/${release_repo}/releases"
 
 # releases/download 下是按 SHA-256 固定的资源包，继续从上游下载；其余的页面链接换成墨采自己的。
 [[rules]]
@@ -451,6 +464,17 @@ regex = 'Metasequoia IME'
 id = "与水杉共用的数据目录"
 regex = 'Application Support/MSIME|telemetry_support_directory\(\)\?\.join\("MSIME"\)|support\.join\("MSIME"\)|"MSIME/(%@/)?telemetry"'
 exclude = ["platforms/ios/**", "platforms/windows/**", "platforms/linux/**", "platforms/android/**", "platforms/harmony/**"]
+
+# ---------- 只在 audit --release 时检查 ----------
+
+# 这是水杉的 Sparkle 公钥。用 Sparkle 的 generate_keys 生成墨采自己的一对，公钥写进这个文件，私钥只放发版环境。
+[[release_audit]]
+id = "Sparkle 公钥还是水杉的"
+regex = 'nbQCVPlpQU41gXudWsKC'
+
+[[release_audit]]
+id = "Sparkle appcast 还指向水杉"
+regex = 'metasequoiaime/msime/releases/download/macos-appcast'
 
 # ---------- 人工复核：不一定是错，发版前看一遍 ----------
 
