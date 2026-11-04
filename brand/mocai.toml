@@ -445,11 +445,12 @@ regex = '237074057301'
 id = "英文全称"
 regex = 'Metasequoia IME'
 
-# 和水杉同名的目录会让两者的崩溃记录和统计混在一起。
+# 和水杉同名的目录会让两者的崩溃记录和统计混在一起。iOS 的相对路径在各自的 App Group 容器里
+# （墨采是 group.app.mocai.ios），不会撞车，所以不查。
 [[audit]]
 id = "与水杉共用的数据目录"
 regex = 'Application Support/MSIME|telemetry_support_directory\(\)\?\.join\("MSIME"\)|support\.join\("MSIME"\)|"MSIME/(%@/)?telemetry"'
-exclude = ["platforms/windows/**", "platforms/linux/**", "platforms/android/**", "platforms/harmony/**"]
+exclude = ["platforms/ios/**", "platforms/windows/**", "platforms/linux/**", "platforms/android/**", "platforms/harmony/**"]
 
 # ---------- 人工复核：不一定是错，发版前看一遍 ----------
 
