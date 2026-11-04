@@ -286,6 +286,13 @@ id = "墨采自己的发版产物"
 regex = 'https://github\.com/metasequoiaime/msime/releases/download/(?=macos-appcast|macos-v|macos-symbols|ios-v|nightly|\$release/)'
 to = "https://github.com/${release_repo}/releases/download/"
 
+# 发版脚本的测试夹具只写前缀，tag 在后面拼，上一条的前瞻匹配不到；它只模拟墨采自己的发版产物。
+[[rules]]
+id = "macOS 发版测试的下载前缀"
+from = '"https://github.com/metasequoiaime/msime/releases/download/"'
+to = '"https://github.com/${release_repo}/releases/download/"'
+include = ["scripts/test-macos-release-extras.py"]
+
 [[rules]]
 id = "iOS 的电脑版下载链接"
 from = 'https://github.com/metasequoiaime/\(repository)/releases'
