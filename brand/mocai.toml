@@ -122,6 +122,13 @@ id = "英文全称"
 from = "Metasequoia IME"
 to = "${name_en_long}"
 
+# macOS 输入模式的英文名。它和水杉的模式挤在同一张「添加输入法」列表里，不改就分不清。
+# 繁体系统也显示这一份：包里没有繁体，实测加了 zh-Hant.lproj 系统也不读。
+[[rules]]
+id = "英文模式名"
+regex = 'Metasequoia (?=(?:Pinyin|Shuangpin|Wubi|English|Japanese|Korean|Cantonese|Zhuyin|Vietnamese|Tibetan|Stroke)\b)'
+to = '${name_en} '
+
 [[rules]]
 id = "版本表英文名"
 regex = '"en": "MSIME'
@@ -541,6 +548,10 @@ regex = '237074057301'
 [[audit]]
 id = "英文全称"
 regex = 'Metasequoia IME'
+
+[[audit]]
+id = "英文模式名"
+regex = 'Metasequoia (?:Pinyin|Shuangpin|Wubi|English|Japanese|Korean|Cantonese|Zhuyin|Vietnamese|Tibetan|Stroke)\b'
 
 # 和水杉同名的目录会让两者的崩溃记录和统计混在一起。iOS 的相对路径在各自的 App Group 容器里
 # （墨采是 group.app.mocai.ios），不会撞车，所以不查。

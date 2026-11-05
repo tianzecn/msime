@@ -71,6 +71,9 @@ class Rules(unittest.TestCase):
         self.assertEqual(rewrite("a.swift", "水杉账号"), "墨采账号")
         self.assertEqual(rewrite("a.plist", "Metasequoia IME"), "Mocai IME")
         self.assertEqual(rewrite("a.ts", "（MSIME，Metasequoia IME）"), "（Mocai IME）")
+        self.assertEqual(rewrite("a.strings", '"x.Hans" = "Metasequoia Pinyin";'), '"x.Hans" = "Mocai Pinyin";')
+        # 只改模式名：类名和版权行不动。
+        self.assertEqual(rewrite("a.mm", "MetasequoiaCandidatePanel"), "MetasequoiaCandidatePanel")
 
     def test_escaped_forms(self) -> None:
         self.assertEqual(rewrite("a.ts", r'"水杉"'), r'"墨采"')
