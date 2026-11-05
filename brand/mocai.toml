@@ -436,6 +436,13 @@ path = "platforms/macos/package-release.sh"
 find = "xiaohe_helpcode.txt jiajia_helpcode.txt wubi86_helpcode.txt NOTICE.md NOTICE-jiajia.md NOTICE-wubi86.md"
 replace = "xiaohe_helpcode.txt wubi86_helpcode.txt NOTICE.md NOTICE-wubi86.md"
 
+# 这份声明通篇只讲加加码表；其余码表各有 ENGINE-NOTICE.md 和 NOTICE-wubi86.md，不受影响。
+[[patches]]
+path = "apps/desktop/src-tauri/tauri.macos.conf.json"
+find = '''      "../../../resources/helpcodes/NOTICE.md": "Licenses/MSIME-helpcode-jiajia-NOTICE.md",
+'''
+replace = ""
+
 [[patches]]
 path = "packages/ui/src/settings/helpcode-preferences.ts"
 find = '''  ["jiajia", "加加"],
