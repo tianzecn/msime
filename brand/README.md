@@ -19,6 +19,17 @@ python3 brand/apply.py audit --root ~/worktrees/mocai-build --release
 
 `apply` 不是幂等的，只接受干净的树，也拒绝在品牌层分支上运行。要重来就 `git reset --hard && git clean -fd` 那棵一次性的树。
 
+### iOS 测试包（TrollStore）
+
+还没加入 Apple Developer Program，iOS 先打伪签名的 ipa，用 TrollStore 装到测试机上：
+
+```sh
+brew install xcodegen cocoapods ldid
+~/worktrees/mocai-build/brand/build-trollstore-ipa.sh ~/worktrees/mocai-deps/artifacts
+```
+
+脚本先用上游的 `platforms/ios/build-app.sh` 做不签名的真机构建，再用 `ldid` 把 App Group 和钥匙串的 entitlements 写进 App 和键盘扩展。团队 ID 用占位值，TrollStore 不校验它。这个包只能用 TrollStore 装，不能上 App Store，也不能用普通的侧载工具装。
+
 ## 合并上游
 
 ```sh
