@@ -246,6 +246,15 @@ regex = '(CFBundleURLSchemes: \[|<string>)msime(\]|</string>)'
 to = '\g<1>${url_scheme}\g<2>'
 include = ["platforms/ios/project.yml", "platforms/ios/App/Resources/Info.plist", "platforms/ios/tests/**"]
 
+# 键盘拉起 App（语音会话、设置、词库、常用语、反馈）和 App 认链接都用这个常量拼 scheme，
+# 它是裸字符串，上面两条都匹配不到。漏掉时 Info.plist 注册的是 mocai，键盘却去开 msime://，
+# 长按空格提示「未能打开墨采」；装着水杉时还会拉起水杉。上游测试同样断言 "msime"，契约对比看不出来，所以另有审计。
+[[rules]]
+id = "iOS URL scheme 常量"
+regex = '(fullURLScheme = ")msime(")'
+to = '\g<1>${url_scheme}\g<2>'
+include = ["shared/backend/account/BackendAccountClient.swift", "platforms/ios/tests/**"]
+
 [[rules]]
 id = "Apple 团队"
 from = "LXCL4Z68GU"
@@ -476,6 +485,11 @@ regex = '(?<![\w-])app\.msime\.(macos|ios|inputmethod|client|signin)\b|com\.meta
 [[audit]]
 id = "上游 Apple 团队"
 regex = 'LXCL4Z68GU'
+
+[[audit]]
+id = "上游 iOS URL scheme"
+# 只认 iOS 的三种写法；鸿蒙等非首发平台的 msime:// 本来就不改。
+regex = 'fullURLScheme = "msime"|CFBundleURLSchemes: \[msime\]|<string>msime</string>'
 
 [[audit]]
 id = "上游 Google 项目"
