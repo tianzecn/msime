@@ -430,6 +430,12 @@ path = "platforms/macos/scripts/engine_resources_budget.py"
 find = '''"xiaohe_helpcode.txt", "jiajia_helpcode.txt", "wubi86_helpcode.txt", "ENGINE-NOTICE.md", "NOTICE.md", "NOTICE-wubi86.md",'''
 replace = '''"xiaohe_helpcode.txt", "wubi86_helpcode.txt", "ENGINE-NOTICE.md", "NOTICE-wubi86.md",'''
 
+# check_app 逐个核对包里的辅助码表，不去掉的话 macOS 全量包打到最后一步才失败。
+[[patches]]
+path = "platforms/macos/package-release.sh"
+find = "xiaohe_helpcode.txt jiajia_helpcode.txt wubi86_helpcode.txt NOTICE.md NOTICE-jiajia.md NOTICE-wubi86.md"
+replace = "xiaohe_helpcode.txt wubi86_helpcode.txt NOTICE.md NOTICE-wubi86.md"
+
 [[patches]]
 path = "packages/ui/src/settings/helpcode-preferences.ts"
 find = '''  ["jiajia", "加加"],
