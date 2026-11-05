@@ -34,6 +34,9 @@ apple_team_id = "MOCAITEAM0"
 # 服务端客户端是「Web 应用」类型，iOS 拿它的 ID 当 GIDServerClientID，ID Token 的受众就是它。
 # 两个 ID 都要列进墨采云的 auth.google.client_ids。
 google_project_number = "397848535684"
+# 墨采云的 AI 对话、联想、润色和翻译转给谁（tianzecn/msime-cloud 的 deploy/mocai/config.json）。
+# 对话页要如实告诉用户内容交给了谁，换服务商时两边一起改。
+backend_ai_provider = "DeepSeek"
 google_ios_client = "397848535684-vp5bk1jjio0qa767t4du0csevt9dafc1"
 google_server_client = "397848535684-57d5i4o4in9sjehqrmk09v6djlju5gtt"
 
@@ -347,6 +350,33 @@ replace = '''<span className={doc.appHeroCopyright}>© 2026 Metasequoia · 基�
 path = "platforms/ios/App/Sources/settings/AboutAndDownloadViews.swift"
 find = '''Text("© 2026 Metasequoia · 输入内容默认只在本机处理")'''
 replace = '''Text("© 2026 Metasequoia · ${name_zh}基于水杉输入法（MSIME）修改，按 GPL-3.0 发布 · 输入内容默认只在本机处理")'''
+
+# 账号里的 AI 对话经后端转给服务商。上游写死的是水杉合作的 EveryAPI，墨采云用的是 backend_ai_provider，
+# 这句要如实写明内容交给了谁。自定义服务里可选的 EveryAPI 预设是真实存在的服务商，不改。
+[[patches]]
+path = "platforms/ios/App/Sources/keyboard/KeyboardChatView.swift"
+find = '''交由 EveryAPI 处理'''
+replace = '''交由 ${backend_ai_provider} 处理'''
+
+[[patches]]
+path = "platforms/ios/App/Sources/keyboard/KeyboardChatView.swift"
+find = '''Image("EveryAPI")'''
+replace = '''Image("MSIMELogo")'''
+
+[[patches]]
+path = "platforms/ios/App/Sources/keyboard/KeyboardChatView.swift"
+find = '''Text("EveryAPI")'''
+replace = '''Text("${short_zh} AI")'''
+
+[[patches]]
+path = "packages/ui/src/chat/chat-page.tsx"
+find = '''与 EveryAPI 对话'''
+replace = '''与 ${backend_ai_provider} 对话'''
+
+[[patches]]
+path = "packages/ui/src/keyboard/home-page.tsx"
+find = '''选择 EveryAPI 模型'''
+replace = '''选择 ${backend_ai_provider} 模型'''
 
 # 加加辅助码表：部分条目来自商业软件，GPL 不覆盖它的内容（docs/open-source-release.md），墨采不分发。
 # 偏好枚举和云同步下标（MSIMECloudHelpcodeSchemas）故意不动：下标不能变，已有偏好值也要读得出来。
