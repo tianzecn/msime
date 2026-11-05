@@ -27,10 +27,15 @@ source_url = "https://github.com/tianzecn/msime"
 # 2026-11-04 生成，私钥在维护者登录钥匙串的 mocai-ime 账户和仓库 Secret SPARKLE_ED_PRIVATE_KEY 里。
 # 换掉它，已安装的墨采就再也收不到更新，所以私钥要另存一份备份。
 sparkle_public_key = "L1eCCUHdvbXhcy+92fi9KKNPCKZJf+coMbbnCOVeD3M="
-# 注册 Apple Developer 团队、Google Cloud 项目之后填这三项。
+# 还没加入 Apple Developer Program，先用占位值：TrollStore 的伪签名不校验团队，App 和键盘扩展一致即可。
+# 加入后填真实的团队 ID，audit --release 在这之前不通过。
 apple_team_id = "MOCAITEAM0"
-google_ios_client = "mocai-placeholder-ios"
-google_server_client = "mocai-placeholder-server"
+# Google Cloud 项目 mocai-ime，2026-11-05 建。iOS 客户端按 bundle ID com.wangpisi.mocai.ios 登记；
+# 服务端客户端是「Web 应用」类型，iOS 拿它的 ID 当 GIDServerClientID，ID Token 的受众就是它。
+# 两个 ID 都要列进墨采云的 auth.google.client_ids。
+google_project_number = "397848535684"
+google_ios_client = "397848535684-vp5bk1jjio0qa767t4du0csevt9dafc1"
+google_server_client = "397848535684-57d5i4o4in9sjehqrmk09v6djlju5gtt"
 
 [scope]
 # 这些路径不改写：
@@ -259,7 +264,7 @@ to = "${google_server_client}"
 [[rules]]
 id = "Google 项目号"
 from = "237074057301"
-to = "（墨采的 Google Cloud 项目）"
+to = "${google_project_number}"
 
 # ---------- 服务地址 ----------
 

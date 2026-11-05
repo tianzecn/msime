@@ -51,11 +51,11 @@ python3 scripts/test-brand-layer.py
 | 产品标识 | `com.wangpisi.mocai`（iOS 是 `com.wangpisi.mocai.ios`）。首个正式版发布后不能再改，用户要重装 |
 | 源码和发版仓库 | `tianzecn/msime`。检查更新读它的 GitHub Releases，Sparkle 的 appcast 挂在它的 `macos-appcast` release 上 |
 | Sparkle 公钥 | `sparkle_public_key`，由补丁写进 `platforms/macos/sparkle-public-key.txt` |
+| Google 登录 | Cloud 项目 `mocai-ime`（`google_project_number`）。`google_ios_client` 按 bundle ID 登记，`google_server_client` 是「Web 应用」类型的服务端客户端。macOS 用的「桌面应用」客户端不进客户端代码，ID 和密钥只配在墨采云上 |
 
 还是占位值、`audit --release` 不让过的：
 
-- Apple 团队：`apple_team_id`
-- Google 登录：`google_ios_client`、`google_server_client`
+- Apple 团队：`apple_team_id`。还没加入 Apple Developer Program，iOS 先打 TrollStore 用的伪签名包。
 
 ### Sparkle 私钥
 
