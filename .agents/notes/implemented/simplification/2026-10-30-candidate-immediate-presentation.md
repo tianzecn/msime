@@ -10,7 +10,7 @@ Status: implemented
 
 iOS、Android、鸿蒙、macOS、Windows、Linux 和网页候选栏直接显示当前状态。取消候选词块按压过渡、展开箭头旋转以及候选进场、退场、逐行揭示和高亮动画。保留按下态、候选选择和长按菜单；输入在原来的时机提交。皮肤的图片帧动画、装饰图待机动效及用户单独选择的打字特效保持独立。
 
-iOS 的候选词块和展开网格格子是 configuration 按钮，被手指按过一次之后，UIKit 再套用 configuration 会给标题标签挂 0.25s 的 `CATransition` fade，同一位置上新旧两个词叠着渐变约 150ms。候选条词块（`updateCandidateButton`）和网格格子（`KeyboardCandidatePanelView.makeChip`）换字时把套用 configuration 和随之的布局放在 `UIView.performWithoutAnimation` 里做完，词块自己的按下态（候选条 `.opacity(0.6)`、网格 `.88` 压暗）不变。
+iOS 的候选词块和展开网格格子是 configuration 按钮，被手指按过一次之后，UIKit 再套用 configuration 会给标题标签挂 0.25s 的 `CATransition` fade，同一位置上新旧两个词叠着渐变约 150ms。候选条词块（`updateCandidateButton`）和网格格子（`KeyboardCandidatePanelView.makeChip`）换字时把套用 configuration 和随之的布局放在 `UIView.performWithoutAnimation` 里做完，词块自己的按下态（候选条 `.opacity(0.6)`、网格 `.88` 压暗）不变。候选条的布局由 `renderCandidateStrip` 在整条词块换完后不带动画地做一次，不再每个词块各做一次，见[iOS 候选栏换字后只布局一次](../testing/2026-11-06-ios-candidate-strip-single-layout.md)。
 
 共享皮肤清单继续接受原有动画字段，保证旧包能读取和同步，宿主忽略候选界面过渡。网页 `resolveSkin` 继续解析兼容数据，候选 DOM 不再挂载动画和延迟隐藏定时器。macOS 展开和收起移除 `NSViewAnimation` 及旧位置采集，原窗口与候选按钮直接设置最终布局。
 

@@ -8298,6 +8298,7 @@ final class KeyboardViewController: UIInputViewController, UIGestureRecognizerDe
     while candidateButtonInputs.count < candidateStack.arrangedSubviews.count { candidateButtonInputs.append(nil) }
     var missingPronunciations: [String] = []
     defer { if !missingPronunciations.isEmpty { requestCandidatePronunciations(missingPronunciations) } }
+    var updatedChips = false
     for (offset, view) in candidateStack.arrangedSubviews.enumerated() {
       guard let chip = view as? KeyboardKeyButton else { continue }
       chip.isHidden = offset >= page.count
@@ -8319,6 +8320,7 @@ final class KeyboardViewController: UIInputViewController, UIGestureRecognizerDe
           updateCandidateButton(chip, candidate: page[offset], hint: "", glosses: [], number: offset + 1, converting: false, source: -1)
           chip.accessibilityLabel = "邮箱后缀 \(offset + 1)：\(page[offset])"
           candidateButtonInputs[offset] = inputs
+          updatedChips = true
         }
         continue
       }
@@ -8349,6 +8351,11 @@ final class KeyboardViewController: UIInputViewController, UIGestureRecognizerDe
         converting: japaneseConversionIndex == offset,
         aiPlaceholder: aiPlaceholder, source: candidateSource, confidentCorrection: confidentCorrection)
       candidateButtonInputs[offset] = inputs
+      updatedChips = true
+    }
+    // 换了字的词块一起布局一次，同样不带动画（#10330）。词块共用一个约束引擎，原来每个词块换完各自 `layoutIfNeeded`，一页换了几个词块就把整条候选栏的约束重解几遍。
+    if updatedChips {
+      UIView.performWithoutAnimation { candidateStack.layoutIfNeeded() }
     }
     updateExpandControl()
 
@@ -8823,6 +8830,8 @@ final class KeyboardViewController: UIInputViewController, UIGestureRecognizerDe
     button.animatesPressFeedback = false
     button.pressFeedback = .opacity(0.6)
     button.setContentCompressionResistancePriority(.required, for: .horizontal)
+    // 候选栏换完一页词块后只布局一次，那一遍里 UIStackView 会给词块挂 `UISV-text-width-disambiguation`（观察到优先级 952、956），为满足它把整条撑宽，单个符号这样的窄词块也被撑大。拥抱优先级高过它、低过宽度约束（998、999），词块就只按内容或宽度约束取宽。这些优先级是 UIKit 的内部值，`SymbolCandidateChipTests` 守住这个行为。
+    button.setContentHuggingPriority(.init(990), for: .horizontal)
     let minimumWidth = button.widthAnchor.constraint(greaterThanOrEqualToConstant: Self.candidateChipMinimumSize.width)
     // 隐藏的栈内词块由 UIStackView 强制设为零宽，词块自己的宽度下限必须让步。
     minimumWidth.priority = .init(999)
@@ -9005,12 +9014,11 @@ final class KeyboardViewController: UIInputViewController, UIGestureRecognizerDe
       configuration.attributedTitle = title
     }
     configuration.contentInsets = candidatePalette?.layout?.chipInsets(fontSize: candidateFont.pointSize, fallback: Self.candidateChipInsets) ?? Self.candidateChipInsets
-    // 被手指按过的词块，UIKit 之后再套用 configuration 会给标题挂 0.25s 的淡入淡出（`CATransition` fade），同一个位置上新旧两个词叠着渐变。候选按 #10330 立即呈现，换字和随之的布局放在不带动画的块里做完。
+    // 被手指按过的词块，UIKit 之后再套用 configuration 会给标题挂 0.25s 的淡入淡出（`CATransition` fade），同一个位置上新旧两个词叠着渐变。候选按 #10330 立即呈现，换字放在不带动画的块里做；随之的布局由 `renderCandidateStrip` 在所有词块换完后、同样不带动画地一次做完。
     UIView.performWithoutAnimation {
       button.configuration = configuration
       button.titleLineCount = 1 + lines.count
       pinCandidateWidth(of: button, contentWidth: contentWidth)
-      button.layoutIfNeeded()
     }
     // `hintSpoken` 是注释另有读法时的朗读文字，比如拆字的读音不是还要输入的键。
     button.accessibilityLabel = annotation.isEmpty
