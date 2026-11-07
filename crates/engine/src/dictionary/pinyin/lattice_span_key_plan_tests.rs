@@ -263,7 +263,15 @@ fn cold_queries_reduce_planning_storage_without_changing_return_storage() {
                 (new.capacity() * size_of::<DictRow>()
                     + new
                         .iter()
-                        .map(|row| row.key.capacity() + row.value.capacity())
+                        // 非空字段各多一个 `SharedString` 的 `Arc`（两个计数加 `String` 本身）。
+                        .map(|row| {
+                            let arc = 2 * size_of::<usize>() + size_of::<String>();
+                            row.key.capacity()
+                                + row.value.capacity()
+                                + arc
+                                    * (usize::from(row.key.capacity() != 0)
+                                        + usize::from(row.value.capacity() != 0))
+                        })
                         .sum::<usize>()) as i128
             );
             assert_eq!(old_heap.minimum_bytes, 0);

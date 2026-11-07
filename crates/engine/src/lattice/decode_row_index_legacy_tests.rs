@@ -196,7 +196,7 @@ fn decode_graph_with_terminal<const WIDE_TERMINAL: bool>(
             trace.iter().map(|edge| edge.key.len()).sum::<usize>() + trace.len().saturating_sub(1),
         );
         for (index, edge) in trace.iter().enumerate() {
-            words.push(edge.word.clone());
+            words.push(String::clone(&edge.word));
             if index != 0 {
                 key.push('\'');
             }

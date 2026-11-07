@@ -347,7 +347,7 @@ impl InputSession {
                 for row in engine.conversion_rows(span, ROWS_PER_SPAN) {
                     if row.value.chars().count() == length && count_han_chars(&row.value) == length
                     {
-                        push(&mut edit.rows, row.value, &key, row.weight);
+                        push(&mut edit.rows, row.value.into_string(), &key, row.weight);
                     }
                 }
             }

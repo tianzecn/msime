@@ -905,8 +905,8 @@ impl JapaneseDictionary {
             .skip(offset)
             .take(limit)
             .map(|lemma| crate::dictionary::DictRow {
-                key: lemma.reading.to_owned(),
-                value: lemma.surface.to_owned(),
+                key: lemma.reading.to_owned().into(),
+                value: lemma.surface.to_owned().into(),
                 weight: i64::from(lemma.word_cost),
             })
             .collect()

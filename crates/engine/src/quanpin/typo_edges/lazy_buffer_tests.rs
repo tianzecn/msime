@@ -114,8 +114,10 @@ fn all_warm_empty_rows_skip_both_unused_buffers() {
 fn rows(entry: &PlannedKey, length: usize) -> Vec<DictRow> {
     (0..length)
         .map(|index| DictRow {
-            key: entry.key.clone(),
-            value: ["甲", "乙", "丙", "丁", "戊"][index % 5].repeat(entry.end - entry.start),
+            key: entry.key.clone().into(),
+            value: ["甲", "乙", "丙", "丁", "戊"][index % 5]
+                .repeat(entry.end - entry.start)
+                .into(),
             weight: [100, 100, -7, i64::MAX, 1][index % 5],
         })
         .collect()

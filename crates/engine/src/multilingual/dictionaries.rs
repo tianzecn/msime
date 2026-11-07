@@ -164,7 +164,7 @@ impl DictionaryComposer {
             let syllables = cut_one_piece_min_segments(raw, true);
             if !syllables.is_empty() && syllables.len() <= MAX_CHINESE_SYLLABLES {
                 if let Some(row) = chinese.conversion_rows(&syllables, 1).into_iter().next() {
-                    self.push(range.clone(), Language::Chinese, row.value)?;
+                    self.push(range.clone(), Language::Chinese, row.value.into_string())?;
                 }
             }
         }

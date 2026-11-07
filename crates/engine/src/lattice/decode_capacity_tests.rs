@@ -13,8 +13,8 @@ fn chain(columns: usize, gap: bool) -> Graph {
             }
             vec![Edge {
                 end: start + 1,
-                word: "合成".to_owned(),
-                key: "he'cheng".to_owned(),
+                word: "合成".to_owned().into(),
+                key: "he'cheng".to_owned().into(),
                 log_prob: -0.25,
                 typo: false,
             }]
@@ -56,8 +56,10 @@ pub(super) fn graph(columns: usize, width: usize, seed: usize, extra: bool) -> G
                 .filter(|index| !extra || (index + start + seed).is_multiple_of(3))
                 .map(|index| Edge {
                     end: (start + 1 + (index + seed) % 3).min(columns),
-                    word: WORDS[(index + start * 3 + seed) % WORDS.len()].to_owned(),
-                    key: format!("k{start}'k{index}"),
+                    word: WORDS[(index + start * 3 + seed) % WORDS.len()]
+                        .to_owned()
+                        .into(),
+                    key: format!("k{start}'k{index}").into(),
                     log_prob: -(((index + start + seed) % 7) as f64) * 0.125,
                     typo: extra,
                 })

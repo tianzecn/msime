@@ -12,8 +12,8 @@ fn repeated_graph(columns: usize, width: usize, unique: usize) -> Graph {
             (0..if start == 0 { width } else { 1 })
                 .map(|index| Edge {
                     end: start + 1,
-                    word: format!("合成{}", if start == 0 { index % unique } else { start }),
-                    key: format!("k{start}\'k{index}"),
+                    word: format!("合成{}", if start == 0 { index % unique } else { start }).into(),
+                    key: format!("k{start}\'k{index}").into(),
                     log_prob: -(index as f64),
                     typo: (start + index) % 3 == 0,
                 })
@@ -61,14 +61,14 @@ fn trace_buffer_keeps_owned_fields_and_empty_key_separators() {
                 for (start, edges) in graph.iter_mut().enumerate() {
                     for (index, edge) in edges.iter_mut().enumerate() {
                         edge.key = if (start + index) % 2 == 0 {
-                            String::new()
+                            String::new().into()
                         } else {
-                            "'🔤'".to_owned()
+                            "'🔤'".to_owned().into()
                         };
                         if kind == 1 && start % 2 == 0 || kind == 2 {
                             edge.word.clear();
                         } else if kind == 3 {
-                            edge.word = "同句😀".to_owned();
+                            edge.word = "同句😀".to_owned().into();
                         }
                     }
                 }

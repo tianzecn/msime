@@ -186,9 +186,9 @@ fn segment_row_cache_hit_borrows_the_segmentation_key() {
     let (_, allocations) = crate::ime::personal_rerank::allocations::count(|| {
         let _ = dictionary.query_database(&segments, "ni'hao");
     });
-    // 一行输出的 `pinyin`、`canonical_pinyin`、`word` 各多一个 `SharedString` 的 `Arc`。
+    // 输出容器 1 次，读音的字符串和 `Arc` 2 次；规范键和词面与行缓存共用存储，省下 7 里的 4 次。
     assert_eq!(
-        allocations, 7,
+        allocations, 3,
         "热缓存分段查询仍创建了临时行页: {allocations}"
     );
 }
@@ -203,9 +203,9 @@ fn automatic_segmentation_reuses_the_joined_code_for_word_items() {
     let (_, allocations) = crate::ime::personal_rerank::allocations::count(|| {
         let _ = dictionary.query_database(&segments, "");
     });
-    // 一行输出的 `pinyin`、`canonical_pinyin`、`word` 各多一个 `SharedString` 的 `Arc`。
+    // 拼接键和输出容器各 1 次，读音的字符串和 `Arc` 2 次；规范键和词面与行缓存共用存储，省下 8 里的 4 次。
     assert_eq!(
-        allocations, 8,
+        allocations, 4,
         "自动分段查询仍创建了临时行页: {allocations}"
     );
 }
@@ -293,8 +293,8 @@ fn fuzzy_row_cache_hash_collision_requeries_instead_of_returning_wrong_rows() {
             typed: "zan'he".to_owned(),
             path_count: 1,
             rows: vec![DictRow {
-                key: "wrong".to_owned(),
-                value: "错误哨兵".to_owned(),
+                key: "wrong".to_owned().into(),
+                value: "错误哨兵".to_owned().into(),
                 weight: 999,
             }],
         },
@@ -883,9 +883,9 @@ fn longer_phrase_cache_hit_does_not_rebuild_the_full_key() {
     let (_, allocations) = crate::ime::personal_rerank::allocations::count(|| {
         let _ = dictionary.longer_phrase_candidates("ni'hao", &segments);
     });
-    // 两行输出的 `pinyin`、`canonical_pinyin`、`word` 各多一个 `SharedString` 的 `Arc`。
+    // 输出容器 1 次，两行共用的读音 2 次；规范键和词面与行缓存共用存储。
     assert_eq!(
-        allocations, 13,
+        allocations, 3,
         "热缓存长词补全仍创建了临时行页: {allocations}"
     );
 }
@@ -1693,8 +1693,9 @@ fn fuzzy_candidate_rows_reuse_the_first_typed_reading_string() {
         let _ = dictionary.fuzzy_candidates("zong'guo", options);
     });
     assert_eq!(skipped, 12, "两个前缀展开路径要申请的次数");
+    // 规范键和词面与行缓存共用存储，比各复制一份（字符串加 `Arc`）少 4 次。
     assert_eq!(
-        allocations, 13,
+        allocations, 9,
         "模糊候选重复复制了首个读音或查询键: {allocations}"
     );
 }

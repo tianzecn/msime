@@ -19,8 +19,8 @@ fn distinct_graph(width: usize) -> Graph {
     vec![(0..width)
         .map(|index| Edge {
             end: 1,
-            word: format!("合成{index}"),
-            key: format!("k{index}"),
+            word: format!("合成{index}").into(),
+            key: format!("k{index}").into(),
             log_prob: -(index as f64),
             typo: index % 3 == 0,
         })
@@ -84,7 +84,7 @@ fn duplicates_keep_the_first_path_without_joining_unused_keys() {
     use crate::ime::personal_rerank::allocations::measure;
     let mut graph = distinct_graph(32);
     for (index, edge) in graph[0].iter_mut().enumerate() {
-        edge.word = format!("合成{}", index % 4);
+        edge.word = format!("合成{}", index % 4).into();
     }
     let options = LatticeOptions {
         nbest: 12,
@@ -120,23 +120,23 @@ fn unique_budget_is_applied_before_trigram_reranking() {
             .enumerate()
             .map(|(index, word)| Edge {
                 end: 1,
-                word: (*word).to_owned(),
-                key: format!("k{index}"),
+                word: (*word).to_owned().into(),
+                key: format!("k{index}").into(),
                 log_prob: -(index as f64),
                 typo: false,
             })
             .collect(),
         vec![Edge {
             end: 2,
-            word: "乙".to_owned(),
-            key: "yi".to_owned(),
+            word: "乙".to_owned().into(),
+            key: "yi".to_owned().into(),
             log_prob: 0.0,
             typo: false,
         }],
         vec![Edge {
             end: 3,
-            word: "丙".to_owned(),
-            key: "bing".to_owned(),
+            word: "丙".to_owned().into(),
+            key: "bing".to_owned().into(),
             log_prob: 0.0,
             typo: false,
         }],
@@ -222,9 +222,9 @@ fn early_unique_budget_preserves_complete_legacy_results() {
                 if duplicates {
                     for (index, edge) in graph[0].iter_mut().enumerate() {
                         edge.word = if index % 7 == 0 {
-                            String::new()
+                            String::new().into()
                         } else {
-                            format!("合成{}", index % 9)
+                            format!("合成{}", index % 9).into()
                         };
                     }
                 }

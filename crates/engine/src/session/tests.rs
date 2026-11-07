@@ -1997,8 +1997,12 @@ fn caret_prefix_expands_its_own_initial_list() {
     let (grew, allocations) =
         crate::ime::personal_rerank::allocations::count(|| session.expand_initial_candidates());
     assert!(grew);
-    // 候选行字段是 `SharedString`：克隆行只加引用计数，新建行的每个非空字段多一个 `Arc`。
-    assert_eq!(allocations, 207, "光标前缀展开申请次数：{allocations}");
+    // 候选行字段是 `SharedString`：克隆行只加引用计数，新建行的每个非空字段多一个 `Arc`。展开出的 30 行共用一份读音，省下其余 29 行各自的字符串和 `Arc`：207 - 2 * 29。
+    assert_eq!(
+        allocations,
+        207 - 2 * 29,
+        "光标前缀展开申请次数：{allocations}"
+    );
     let widened = words(&session);
     assert_eq!(widened.len(), 30);
     assert!(widened.contains(&"丝".to_owned()), "{widened:?}");
@@ -4328,8 +4332,8 @@ fn typing_at_the_end_does_not_build_the_preedit_twice_for_caret_detection() {
         .filter(|row| row.pinyin == "ni'h")
         .count();
     assert_eq!(matched_rows, 5);
-    // SharedString 克隆只增加引用计数，候选行重建的分配预算低于旧实现。冷 `ni'h` 页存进压缩缓存时不再把 5 行的规范键和词面各复制一份：98 - 5 * 2。
-    assert_eq!(allocations, 98 - 5 * 2);
+    // SharedString 克隆只增加引用计数，候选行重建的分配预算低于旧实现。词库行也是共享字符串、整页共用读音之后的实测值。
+    assert_eq!(allocations, 70);
 }
 
 #[test]

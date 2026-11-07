@@ -24,16 +24,16 @@ fn repeated_previous_bytes_are_hashed_once_per_score_row() {
         let graph = vec![
             vec![Edge {
                 end: 1,
-                word: previous.to_owned(),
-                key: "a".to_owned(),
+                word: previous.to_owned().into(),
+                key: "a".to_owned().into(),
                 log_prob: 0.0,
                 typo: false,
             }],
             (0..width)
                 .map(|index| Edge {
                     end: 2,
-                    word: format!("后词{index}"),
-                    key: "b".to_owned(),
+                    word: format!("后词{index}").into(),
+                    key: "b".to_owned().into(),
                     log_prob: -(index as f64),
                     typo: false,
                 })
@@ -216,7 +216,7 @@ fn bigram_prefix_release_comparison() {
             if empty {
                 if columns == 2 {
                     for edge in &mut graph[0] {
-                        edge.word = "合成前词测试词".to_owned();
+                        edge.word = "合成前词测试词".to_owned().into();
                     }
                 }
                 for edge in graph.last_mut().unwrap() {

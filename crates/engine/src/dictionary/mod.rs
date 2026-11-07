@@ -12,8 +12,8 @@ use rusqlite::Row;
 /// One dictionary row.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct DictRow {
-    pub key: String,
-    pub value: String,
+    pub key: crate::types::SharedString,
+    pub value: crate::types::SharedString,
     pub weight: i64,
 }
 

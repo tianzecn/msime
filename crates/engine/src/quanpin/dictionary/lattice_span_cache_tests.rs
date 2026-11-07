@@ -124,8 +124,8 @@ fn a_wrong_entry_at_the_same_hash_requeries_instead_of_returning_rows() {
                 span_limit: wrong_limit,
                 span: wrong_span.to_owned(),
                 rows: vec![DictRow {
-                    key: "zzzz".to_owned(),
-                    value: "错误哨兵".to_owned(),
+                    key: "zzzz".to_owned().into(),
+                    value: "错误哨兵".to_owned().into(),
                     weight: i64::MAX,
                 }],
             },

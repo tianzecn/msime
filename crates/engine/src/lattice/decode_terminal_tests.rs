@@ -115,7 +115,7 @@ fn terminal_stream_preserves_nonfinite_ties_and_extreme_limits() {
             for special in [false, true] {
                 let mut graph = graph(1, width, 0, false);
                 for (index, edge) in graph[0].iter_mut().enumerate() {
-                    edge.word = format!("合成{index}");
+                    edge.word = format!("合成{index}").into();
                     if special {
                         edge.log_prob =
                             [f64::NAN, f64::INFINITY, f64::NEG_INFINITY, -0.0, 0.0, 1.0][index % 6];

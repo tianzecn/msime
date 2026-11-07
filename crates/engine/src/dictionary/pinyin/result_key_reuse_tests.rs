@@ -45,7 +45,7 @@ fn original_query(
         // 按权重读取，每个键最先出现的是它的最高权重行。
         for row in rows {
             let slot = result
-                .entry(row.key.clone())
+                .entry(String::clone(&row.key))
                 .or_insert_with(|| Vec::with_capacity(per_key_limit));
             if slot.len() < per_key_limit {
                 slot.push(row);
@@ -130,8 +130,8 @@ pub(super) fn repeated_row_key_allocations(
     let mut saved = 0;
     for (table, table_keys) in groups {
         for row in database.batch_rows(&table, &table_keys, usize::MAX) {
-            if !present.insert(row.key.clone()) {
-                saved += count(|| row.key.clone()).1;
+            if !present.insert(String::clone(&row.key)) {
+                saved += count(|| String::clone(&row.key)).1;
             }
         }
     }

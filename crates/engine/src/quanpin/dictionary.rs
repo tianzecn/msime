@@ -1755,10 +1755,14 @@ fn project_cached_resolution_with<T>(
 
 /// 直接构造拥有型候选；缓存行可用惰性克隆迭代，避免完整的中间行页。
 fn matched_items(rows: impl IntoIterator<Item = DictRow>, matched_code: &str) -> Vec<WordItem> {
+    // 这一页的匹配读音相同，各行共用一份；空页不建，九键探测时空页很常见。
+    let mut shared_code = None;
     rows.into_iter()
         .map(|row| {
             WordItem::new(
-                matched_code,
+                shared_code
+                    .get_or_insert_with(|| crate::types::SharedString::from(matched_code))
+                    .clone(),
                 row.value,
                 row.weight,
                 CandidateSource::Database,

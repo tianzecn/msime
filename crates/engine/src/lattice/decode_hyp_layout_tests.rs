@@ -21,8 +21,10 @@ fn graph(columns: usize, width: usize, seed: usize, extra: bool) -> Graph {
                 .filter(|index| !extra || (index + start + seed).is_multiple_of(3))
                 .map(|index| Edge {
                     end: (start + 1 + (index + seed) % 3).min(columns),
-                    word: WORDS[(index + start * 3 + seed) % WORDS.len()].to_owned(),
-                    key: format!("k{start}'k{index}"),
+                    word: WORDS[(index + start * 3 + seed) % WORDS.len()]
+                        .to_owned()
+                        .into(),
+                    key: format!("k{start}'k{index}").into(),
                     log_prob: -(((index + start + seed) % 7) as f64) * 0.125,
                     typo: extra,
                 })

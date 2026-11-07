@@ -214,7 +214,7 @@ pub(crate) fn decode_graph(
         let mut cursor = Some(hyp);
         while let Some(step) = cursor {
             let Some(edge) = step.edge else { break };
-            words.push(edge.word.clone());
+            words.push(String::clone(&edge.word));
             keys.push(edge.key.as_str());
             let (column, at) = step.prev;
             cursor = Some(&columns[column].hyps[at]);

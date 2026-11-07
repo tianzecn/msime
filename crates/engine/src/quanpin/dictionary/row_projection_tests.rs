@@ -181,13 +181,12 @@ fn cold_and_warm_database_projection_preserves_fields_capacity_and_limits() {
             if initial && segments[0] == "n" {
                 assert_eq!(actual.len(), INITIAL_CANDIDATE_LIMIT);
             }
-            // 冻结实现每行为匹配码新建一个 `SharedString`（字符串加 `Arc`）。
+            // 冻结实现每行为匹配码新建一个 `SharedString`（字符串加 `Arc`），现在整页共用一份。
+            let shared = 2 * actual.len().saturating_sub(1);
             let saved = if initial {
-                2 * actual.len()
-                    + usize::from(round == 1 && !actual.is_empty())
-                    + usize::from(round == 1)
+                shared + usize::from(round == 1 && !actual.is_empty()) + usize::from(round == 1)
             } else {
-                usize::from(round == 1 && !actual.is_empty())
+                shared + usize::from(round == 1 && !actual.is_empty())
             };
             assert_eq!(
                 new_count + saved,
@@ -228,7 +227,10 @@ fn cold_and_warm_continuations_keep_rows_and_cached_storage() {
             assert_eq!(actual.capacity(), expected.capacity());
             assert_eq!(capacities(&actual), capacities(&expected));
             assert_eq!(
-                new_count + usize::from(round == 1 && !actual.is_empty()),
+                // 整页共用一份匹配码，省下其余各行的字符串和 `Arc`。
+                new_count
+                    + 2 * actual.len().saturating_sub(1)
+                    + usize::from(round == 1 && !actual.is_empty()),
                 old_count
             );
             assert_cached_pages_equal(
@@ -257,7 +259,8 @@ fn warm_projection_heap_only_contains_owned_output() {
             measure(|| before.legacy_query_database(&segments, segmentation));
         let (actual, new_heap) = measure(|| after.query_database(&segments, segmentation));
         assert_eq!(actual, expected);
-        assert_eq!(new_heap.remaining_bytes, old_heap.remaining_bytes);
+        // 输出行共用一份匹配码，持有的字节不多于冻结实现。
+        assert!(new_heap.remaining_bytes <= old_heap.remaining_bytes);
         assert_eq!(new_heap.minimum_bytes, 0);
         assert_eq!(old_heap.minimum_bytes, 0);
         assert!(new_heap.peak_bytes < old_heap.peak_bytes);

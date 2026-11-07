@@ -837,16 +837,16 @@ impl WordItem {
     }
 
     pub fn new(
-        pinyin: impl Into<String>,
-        word: impl Into<String>,
+        pinyin: impl Into<SharedString>,
+        word: impl Into<SharedString>,
         weight: i64,
         source: CandidateSource,
-        canonical_pinyin: impl Into<String>,
+        canonical_pinyin: impl Into<SharedString>,
     ) -> Self {
         Self {
-            pinyin: SharedString::from(Into::<String>::into(pinyin)),
-            canonical_pinyin: SharedString::from(Into::<String>::into(canonical_pinyin)),
-            word: SharedString::from(Into::<String>::into(word)),
+            pinyin: pinyin.into(),
+            canonical_pinyin: canonical_pinyin.into(),
+            word: word.into(),
             weight,
             source,
             ..Self::default()

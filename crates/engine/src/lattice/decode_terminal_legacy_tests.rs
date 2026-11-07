@@ -175,7 +175,7 @@ pub(super) fn decode_graph(
             trace.iter().map(|edge| edge.key.len()).sum::<usize>() + trace.len().saturating_sub(1),
         );
         for (index, edge) in trace.iter().enumerate() {
-            words.push(edge.word.clone());
+            words.push(String::clone(&edge.word));
             if index != 0 {
                 key.push('\'');
             }

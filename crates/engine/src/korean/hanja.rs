@@ -23,8 +23,8 @@ pub(crate) fn browse(query: &str, offset: usize, limit: usize) -> Vec<crate::dic
         .skip(offset)
         .take(limit)
         .map(|(key, value)| crate::dictionary::DictRow {
-            key: key.to_owned(),
-            value: value.to_owned(),
+            key: key.to_owned().into(),
+            value: value.to_owned().into(),
             weight: 0,
         })
         .collect()

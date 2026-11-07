@@ -54,8 +54,8 @@ fn count_tails<T>(run: impl FnOnce() -> T) -> (T, TailCounts) {
 fn edge(end: usize, word: String, score: f64) -> Edge {
     Edge {
         end,
-        key: format!("reading-{word}"),
-        word,
+        key: format!("reading-{word}").into(),
+        word: word.into(),
         log_prob: score,
         typo: false,
     }

@@ -53,7 +53,7 @@ fn exhaustive_paths(
                 next.key.push('\'');
             }
             next.key.push_str(&edge.key);
-            next.words.push(edge.word.clone());
+            next.words.push(edge.word.clone().to_string());
             next.typo_edges += usize::from(edge.typo);
             visit(graph, extra, options, edge.end, next, paths);
         }
@@ -86,8 +86,8 @@ fn exhaustive_paths(
 fn varying_bigram_rows_preserve_paths_and_score_bits() {
     let edge = |end, word: &str, score, typo| Edge {
         end,
-        word: word.to_owned(),
-        key: format!("key{end}"),
+        word: word.to_owned().into(),
+        key: format!("key{end}").into(),
         log_prob: score,
         typo,
     };

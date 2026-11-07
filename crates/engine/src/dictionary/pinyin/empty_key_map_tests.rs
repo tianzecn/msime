@@ -41,7 +41,7 @@ fn original_query(
         // 按权重读取，每个键最先出现的是它的最高权重行。
         for row in database.batch_rows(table, table_keys, usize::MAX) {
             let slot = result
-                .entry(row.key.clone())
+                .entry(String::clone(&row.key))
                 .or_insert_with(|| Vec::with_capacity(per_key_limit));
             if slot.len() < per_key_limit {
                 slot.push(row);

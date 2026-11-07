@@ -259,8 +259,13 @@ impl PinyinDatabase {
                 if !crate::text::is_all_han(suffix) {
                     continue;
                 }
-                row.value = suffix.to_owned();
-                row.key = row.key.strip_prefix(&prefix).unwrap_or_default().to_owned();
+                row.value = suffix.to_owned().into();
+                row.key = row
+                    .key
+                    .strip_prefix(&prefix)
+                    .unwrap_or_default()
+                    .to_owned()
+                    .into();
                 result.push(row);
             }
         }
@@ -366,7 +371,7 @@ impl PinyinDatabase {
                         slot.push(row);
                     }
                 } else {
-                    let key = row.key.clone();
+                    let key = String::clone(&row.key);
                     let mut slot =
                         query_capacity(per_key_limit).map_or_else(Vec::new, Vec::with_capacity);
                     slot.push(row);
@@ -893,8 +898,8 @@ fn contains_table_key(keys: &[String], key: &str) -> bool {
 
 fn dict_row(row: &Row<'_>) -> rusqlite::Result<DictRow> {
     Ok(DictRow {
-        key: column_text(row, 0)?,
-        value: column_text(row, 1)?,
+        key: column_text(row, 0)?.into(),
+        value: column_text(row, 1)?.into(),
         weight: column_i64(row, 2)?,
     })
 }
@@ -1506,8 +1511,8 @@ mod tests {
     #[test]
     fn value_dedup_skips_trivial_row_lists() {
         let mut rows = vec![DictRow {
-            key: "ni".to_owned(),
-            value: "你".to_owned(),
+            key: "ni".to_owned().into(),
+            value: "你".to_owned().into(),
             weight: 1,
         }];
 
@@ -1521,8 +1526,8 @@ mod tests {
     fn value_dedup_for_longer_phrases_does_not_allocate() {
         let mut rows = (0..36)
             .map(|index| DictRow {
-                key: format!("key-{index}"),
-                value: format!("value-{}", index % 18),
+                key: format!("key-{index}").into(),
+                value: format!("value-{}", index % 18).into(),
                 weight: index,
             })
             .collect::<Vec<_>>();

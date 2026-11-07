@@ -49,7 +49,7 @@ fn frozen_query(
                     slot.push(row);
                 }
             } else {
-                let key = row.key.clone();
+                let key = String::clone(&row.key);
                 let mut slot = Vec::with_capacity(per_key_limit);
                 slot.push(row);
                 result.insert(key, slot);

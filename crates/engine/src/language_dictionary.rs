@@ -89,8 +89,8 @@ impl LanguageDictionary {
         )?;
         let rows = statement.query_map((query, limit as i64, offset as i64), |row| {
             Ok(crate::dictionary::DictRow {
-                key: row.get(0)?,
-                value: row.get(1)?,
+                key: row.get::<_, String>(0)?.into(),
+                value: row.get::<_, String>(1)?.into(),
                 weight: row.get(2)?,
             })
         })?;

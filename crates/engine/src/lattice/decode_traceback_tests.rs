@@ -20,8 +20,8 @@ fn traceback_counts_all_marked_edges_even_with_an_empty_word() {
         .map(|(at, word)| {
             vec![Edge {
                 end: at + 1,
-                word: (*word).to_owned(),
-                key: format!("k{at}"),
+                word: (*word).to_owned().into(),
+                key: format!("k{at}").into(),
                 log_prob: -0.25,
                 typo: at % 2 != 0,
             }]

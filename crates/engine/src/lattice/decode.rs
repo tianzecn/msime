@@ -303,8 +303,8 @@ pub struct TypoEdge {
     pub start: usize,
     pub end: usize,
     /// The word's own reading, so a path through it carries the corrected pronunciation.
-    pub key: String,
-    pub value: String,
+    pub key: crate::types::SharedString,
+    pub value: crate::types::SharedString,
     pub weight: i64,
     /// Subtracted from the edge's usual log probability.
     pub penalty: f64,
@@ -436,8 +436,8 @@ pub fn decode_typo_sentence(
 
 pub(super) struct Edge {
     end: usize,
-    word: String,
-    key: String,
+    word: crate::types::SharedString,
+    key: crate::types::SharedString,
     log_prob: f64,
     typo: bool,
 }
@@ -508,7 +508,11 @@ pub(super) fn build_graph(
                             end,
                             word: row.value,
                             key: if row.key.is_empty() {
-                                span_key.get_or_insert_with(|| span.join("'")).clone()
+                                span_key
+                                    .get_or_insert_with(|| {
+                                        crate::types::SharedString::from(span.join("'"))
+                                    })
+                                    .clone()
                             } else {
                                 row.key
                             },
@@ -583,7 +587,11 @@ pub(super) fn build_graph_borrowed<'rows>(
                             end,
                             word: row.value.clone(),
                             key: if row.key.is_empty() {
-                                span_key.get_or_insert_with(|| span.join("'")).clone()
+                                span_key
+                                    .get_or_insert_with(|| {
+                                        crate::types::SharedString::from(span.join("'"))
+                                    })
+                                    .clone()
                             } else {
                                 row.key.clone()
                             },
@@ -1427,7 +1435,7 @@ fn decode_graph_with_terminal<const WIDE_TERMINAL: bool>(
             trace.iter().map(|edge| edge.key.len()).sum::<usize>() + trace.len().saturating_sub(1),
         );
         for (index, edge) in trace.iter().enumerate() {
-            words.push(edge.word.clone());
+            words.push(String::clone(&edge.word));
             if index != 0 {
                 key.push('\'');
             }
@@ -1652,8 +1660,8 @@ pub fn decode_pinned(
         if !column.iter().any(|edge| edge.end == pin.end) {
             column.push(Edge {
                 end: pin.end,
-                word: pin.word.clone(),
-                key: pin.key.clone(),
+                word: pin.word.clone().into(),
+                key: pin.key.clone().into(),
                 log_prob: edge_log_prob(1, pin.end - pin.start, options),
                 typo: false,
             });
@@ -1701,8 +1709,8 @@ pub(super) mod tests {
 
     pub(crate) fn row(key: &str, value: &str, weight: i64) -> LatticeLexeme {
         LatticeLexeme {
-            key: key.to_owned(),
-            value: value.to_owned(),
+            key: key.to_owned().into(),
+            value: value.to_owned().into(),
             weight,
         }
     }
@@ -1787,8 +1795,8 @@ pub(super) mod tests {
     fn columns_reserve_their_incoming_beam_fanout() {
         let edge = |end| Edge {
             end,
-            word: "词".to_owned(),
-            key: "ci".to_owned(),
+            word: "词".to_owned().into(),
+            key: "ci".to_owned().into(),
             log_prob: 0.0,
             typo: false,
         };
@@ -1825,8 +1833,8 @@ pub(super) mod tests {
                 .map(|position| {
                     vec![Edge {
                         end: position + 1,
-                        word: "甲".to_owned(),
-                        key: "jia".to_owned(),
+                        word: "甲".to_owned().into(),
+                        key: "jia".to_owned().into(),
                         log_prob: -1.0,
                         typo: false,
                     }]

@@ -68,7 +68,7 @@ fn small_bigram_row_index_preserves_wide_fallback_and_scores() {
                 .flat_map(|edges| edges.iter_mut())
                 .enumerate()
             {
-                edge.word = format!("词{index}");
+                edge.word = format!("词{index}").into();
                 if index % 3 == 0 {
                     edge.log_prob = f64::NAN;
                 }

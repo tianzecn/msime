@@ -17,7 +17,7 @@ Status: implemented
 ## Alternatives considered
 
 - **取消压缩、全部存完整页**：`WordItem` 克隆已经只剩引用计数，完整页的取页成本与新压缩页相同，代码也更少。但完整页每行多存约 56 字节的行结构，每行还各持有一份读音的 `Arc`；128 槽缓存里的大页常驻内存会变大，压缩页省内存的那一半理由仍然成立。
-- **`DictRow` 本身改用 `SharedString`**：一次改到底，`segment_row_cache` 和词网格也能受益。这里先只改路径页。
+- **`DictRow` 本身改用 `SharedString`**：一次改到底，`segment_row_cache` 和词网格也能受益。这里先只改路径页，`DictRow` 另见[词库行与图边共用文本字段](2026-11-06-dict-row-shared-strings.md)。
 
 ## Consequences
 
