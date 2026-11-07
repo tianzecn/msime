@@ -1161,7 +1161,7 @@ impl QuanpinDictionary {
             .collect();
         match primary_full {
             PrimaryPage::Cached(page) => {
-                merge_alternative_rows(result, page.cloned_rows(cache_key), alternative_full)
+                merge_alternative_rows(result, page.cloned_rows(), alternative_full)
             }
             PrimaryPage::Owned(rows) => {
                 merge_alternative_segmentations(result, rows, alternative_full)
@@ -1530,7 +1530,7 @@ impl QuanpinDictionary {
     ) -> Vec<WordItem> {
         let cache_key = path_cache_key(raw, segmentation);
         if let Some(cached) = self.cache.get_ref_by(cache_key) {
-            return cached.copy_rows(cache_key);
+            return cached.copy_rows();
         }
         self.query_single_path_miss(cache_key, segmentation, segments)
     }
@@ -1549,7 +1549,7 @@ impl QuanpinDictionary {
         }
         let cache_key = path_cache_key(raw, segmentation);
         if let Some(rows) = self.cache.get_ref_by(cache_key) {
-            rows.append_to(cache_key, result);
+            rows.append_to(result);
             return;
         }
         let rows = self.query_single_path_miss(cache_key, segmentation, segments);
@@ -1564,10 +1564,8 @@ impl QuanpinDictionary {
         segments: &[String],
     ) -> Vec<WordItem> {
         let result = self.query_database(segments, segmentation);
-        self.cache.insert(
-            cache_key.to_owned(),
-            PathPage::from_dictionary(cache_key, &result),
-        );
+        self.cache
+            .insert(cache_key.to_owned(), PathPage::from_dictionary(&result));
         result
     }
 

@@ -119,15 +119,15 @@ fn compact_page_preserves_metadata_and_both_output_paths() {
             9 => rows.iter_mut().for_each(|row| row.pinyin.clear()),
             _ => unreachable!(),
         }
-        let page = PathPage::from_dictionary("ni", &rows);
+        let page = PathPage::from_dictionary(&rows);
         assert_eq!(matches!(page, PathPage::Compact(_)), changed == 0);
-        equal_rows(&page.copy_rows("ni"), &rows.clone());
-        equal_rows(&page.cloned_rows("ni").collect(), &rows.clone());
+        equal_rows(&page.copy_rows(), &rows.clone());
+        equal_rows(&page.cloned_rows().collect(), &rows.clone());
         let mut expected = vec![WordItem::default()];
         let mut actual = expected.clone();
         expected.reserve(rows.len());
         expected.extend(rows.iter().cloned());
-        page.append_to("ni", &mut actual);
+        page.append_to(&mut actual);
         equal_rows(&actual, &expected);
     }
     let mut rows = Vec::with_capacity(12);
@@ -143,4 +143,51 @@ fn compact_page_preserves_metadata_and_both_output_paths() {
         panic!("完整页必须原样转移");
     };
     assert_eq!(rows.capacity(), capacity);
+}
+
+#[test]
+fn compact_page_shares_text_storage_with_rows() {
+    for count_rows in [2usize, 3, 32, 128] {
+        let rows: Vec<WordItem> = (0..count_rows)
+            .map(|index| {
+                WordItem::new(
+                    "ni",
+                    format!("合成词{index}😀"),
+                    1000 - index as i64,
+                    CandidateSource::Database,
+                    "ni",
+                )
+            })
+            .collect();
+        // 存页：只有外层 `Box` 和行容器两次申请，文本字段不复制。
+        let (page, stored) = count(|| PathPage::from_dictionary(&rows));
+        assert!(matches!(page, PathPage::Compact(_)));
+        assert_eq!(stored, 2, "rows={count_rows}");
+        // 取页：三个出口都只申请输出容器本身，与行数无关。
+        let (copied, copy) = count(|| page.copy_rows());
+        assert_eq!(copy, 1, "rows={count_rows}");
+        let (iterated, iterate) = count(|| page.cloned_rows().collect::<Vec<_>>());
+        assert_eq!(iterate, 1, "rows={count_rows}");
+        let mut appended = Vec::new();
+        let ((), append) = count(|| page.append_to(&mut appended));
+        assert_eq!(append, 1, "rows={count_rows}");
+        for output in [&copied, &iterated, &appended] {
+            assert_eq!(output, &rows);
+            for (actual, original) in output.iter().zip(&rows) {
+                assert!(actual.word.shares_storage_with(&original.word));
+                assert!(actual
+                    .canonical_pinyin
+                    .shares_storage_with(&original.canonical_pinyin));
+            }
+            // 整页只存一份读音，输出行都指向它。
+            assert!(output
+                .windows(2)
+                .all(|pair| pair[0].pinyin.shares_storage_with(&pair[1].pinyin)));
+        }
+        // 写时复制：改一份输出不影响缓存页和其他输出。
+        let mut edited = page.copy_rows();
+        edited[0].word.push_str("修改副本");
+        assert_eq!(page.copy_rows(), rows);
+        assert!(!edited[0].word.shares_storage_with(&rows[0].word));
+    }
 }

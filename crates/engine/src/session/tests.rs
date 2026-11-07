@@ -4328,8 +4328,8 @@ fn typing_at_the_end_does_not_build_the_preedit_twice_for_caret_detection() {
         .filter(|row| row.pinyin == "ni'h")
         .count();
     assert_eq!(matched_rows, 5);
-    // SharedString 克隆只增加引用计数，候选行重建的分配预算低于旧实现。
-    assert_eq!(allocations, 98);
+    // SharedString 克隆只增加引用计数，候选行重建的分配预算低于旧实现。冷 `ni'h` 页存进压缩缓存时不再把 5 行的规范键和词面各复制一份：98 - 5 * 2。
+    assert_eq!(allocations, 98 - 5 * 2);
 }
 
 #[test]
@@ -4436,8 +4436,12 @@ fn typing_at_a_caret_reuses_the_editing_text_length() {
         crate::ime::personal_rerank::allocations::count(|| session.character(b'x', false));
 
     assert!(result.handled);
-    // 候选行字段是 `SharedString`：克隆行只加引用计数，新建行的每个非空字段多一个 `Arc`。
-    assert_eq!(allocations, 164, "光标处输入的分配次数：{allocations}");
+    // 候选行字段是 `SharedString`：克隆行只加引用计数，新建行的每个非空字段多一个 `Arc`。这一键两次命中 5 行的压缩页，取页不再为每行的读音、词面和规范键各建一份 `String` 加一个 `Arc`：164 - 2 * 5 * 6。
+    assert_eq!(
+        allocations,
+        164 - 2 * 5 * 6,
+        "光标处输入的分配次数：{allocations}"
+    );
 }
 
 #[test]

@@ -73,7 +73,7 @@ impl QuanpinDictionary {
     ) -> Vec<WordItem> {
         let cache_key = path_cache_key(raw, segmentation);
         if let Some(cached) = self.cache.get_ref_by(cache_key) {
-            return cached.copy_rows(cache_key);
+            return cached.copy_rows();
         }
         // 冷存储共用当前入口，旧路径仍将热页整体复制后追加。
         self.query_single_path_miss(cache_key, segmentation, segments)
@@ -242,12 +242,8 @@ fn series_stream_keeps_cache_and_owned_output() {
                     let key = join_segments(&cuts[..length]);
                     if let Some(expected) = before.cache.get_ref_by(key.as_str()) {
                         assert_rows(
-                            &after
-                                .cache
-                                .get_ref_by(key.as_str())
-                                .unwrap()
-                                .copy_rows(&key),
-                            &expected.copy_rows(&key),
+                            &after.cache.get_ref_by(key.as_str()).unwrap().copy_rows(),
+                            &expected.copy_rows(),
                         );
                     }
                 }
@@ -328,8 +324,8 @@ fn prefix_append_preserves_metadata_capacity_and_fifo_age() {
                 after.append_single_path(&mut actual, "ni", "ni", &cuts);
                 assert_rows(&actual, &expected);
                 assert_rows(
-                    &after.cache.get_ref_by("ni").unwrap().copy_rows("ni"),
-                    &before.cache.get_ref_by("ni").unwrap().copy_rows("ni"),
+                    &after.cache.get_ref_by("ni").unwrap().copy_rows(),
+                    &before.cache.get_ref_by("ni").unwrap().copy_rows(),
                 );
                 before.cache.insert("third".to_owned(), Vec::new().into());
                 after.cache.insert("third".to_owned(), Vec::new().into());

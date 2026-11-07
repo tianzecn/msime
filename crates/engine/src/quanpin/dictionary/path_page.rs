@@ -1,5 +1,4 @@
-use crate::dictionary::DictRow;
-use crate::types::{CandidateSource, SchemeType, WordItem};
+use crate::types::{CandidateSource, SchemeType, SharedString, WordItem};
 
 /// 普通页只保存变化的字段；展开页继续持有原完整候选和容量。
 #[derive(Clone, Debug, PartialEq)]
@@ -9,10 +8,18 @@ pub(super) enum PathPage {
     Compact(Box<CompactPage>),
 }
 
+/// 压缩页的文本字段与产生它的候选行共用 `SharedString` 存储：存页和取页都只加引用计数，不复制字符串。整页的匹配读音只存一份，每个输出行共用它。
 #[derive(Clone, Debug, PartialEq)]
 pub(super) struct CompactPage {
-    pinyin: Option<String>,
-    rows: Vec<DictRow>,
+    pinyin: SharedString,
+    rows: Vec<CompactRow>,
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub(super) struct CompactRow {
+    canonical_pinyin: SharedString,
+    word: SharedString,
+    weight: i64,
 }
 
 impl From<Vec<WordItem>> for PathPage {
@@ -22,25 +29,25 @@ impl From<Vec<WordItem>> for PathPage {
 }
 
 impl PathPage {
-    pub(super) fn from_dictionary(cache_key: &str, rows: &[WordItem]) -> Self {
+    pub(super) fn from_dictionary(rows: &[WordItem]) -> Self {
         let Some(first) = rows.first() else {
             return Self::Empty;
         };
-        let separate_reading = first.pinyin != cache_key;
+        // 单行页压缩后省不下行结构，反而多一个 `Box`。
         if first.pinyin.is_empty()
-            || rows.len() <= 1 + usize::from(separate_reading)
+            || rows.len() <= 1
             || !rows.iter().all(|row| ordinary_row(row, &first.pinyin))
         {
             return Self::Full(rows.to_vec());
         }
         let mut compact = Vec::with_capacity(rows.len());
-        compact.extend(rows.iter().map(|row| DictRow {
-            key: row.canonical_pinyin.to_string(),
-            value: row.word.to_string(),
+        compact.extend(rows.iter().map(|row| CompactRow {
+            canonical_pinyin: row.canonical_pinyin.clone(),
+            word: row.word.clone(),
             weight: row.weight,
         }));
         Self::Compact(Box::new(CompactPage {
-            pinyin: separate_reading.then(|| first.pinyin.to_string()),
+            pinyin: first.pinyin.clone(),
             rows: compact,
         }))
     }
@@ -53,37 +60,35 @@ impl PathPage {
         }
     }
 
-    pub(super) fn copy_rows(&self, cache_key: &str) -> Vec<WordItem> {
+    pub(super) fn copy_rows(&self) -> Vec<WordItem> {
         match self {
             Self::Empty => Vec::new(),
             Self::Full(rows) => rows.clone(),
             Self::Compact(page) => {
-                let pinyin = page.pinyin.as_deref().unwrap_or(cache_key);
                 let mut result = Vec::with_capacity(page.rows.len());
-                result.extend(page.rows.iter().map(|row| copy_row(row, pinyin)));
+                result.extend(page.rows.iter().map(|row| copy_row(row, &page.pinyin)));
                 result
             }
         }
     }
 
-    pub(super) fn append_to(&self, cache_key: &str, result: &mut Vec<WordItem>) {
+    pub(super) fn append_to(&self, result: &mut Vec<WordItem>) {
         result.reserve(self.len());
         match self {
             Self::Empty => {}
             Self::Full(rows) => result.extend(rows.iter().cloned()),
             Self::Compact(page) => {
-                let pinyin = page.pinyin.as_deref().unwrap_or(cache_key);
-                result.extend(page.rows.iter().map(|row| copy_row(row, pinyin)));
+                result.extend(page.rows.iter().map(|row| copy_row(row, &page.pinyin)));
             }
         }
     }
 
-    pub(super) fn cloned_rows<'a>(&'a self, cache_key: &'a str) -> ClonedRows<'a> {
+    pub(super) fn cloned_rows(&self) -> ClonedRows<'_> {
         match self {
             Self::Empty => ClonedRows::Full([].iter()),
             Self::Full(rows) => ClonedRows::Full(rows.iter()),
             Self::Compact(page) => ClonedRows::Compact {
-                pinyin: page.pinyin.as_deref().unwrap_or(cache_key),
+                pinyin: &page.pinyin,
                 rows: page.rows.iter(),
             },
         }
@@ -119,21 +124,23 @@ fn ordinary_row(row: &WordItem, reading: &str) -> bool {
         && !confident_correction
 }
 
-fn copy_row(row: &DictRow, pinyin: &str) -> WordItem {
-    WordItem::new(
-        pinyin,
-        row.value.clone(),
-        row.weight,
-        CandidateSource::Database,
-        row.key.clone(),
-    )
+/// 还原 `WordItem::new` 给词库行的默认元数据；文本字段只加引用计数。
+fn copy_row(row: &CompactRow, pinyin: &SharedString) -> WordItem {
+    WordItem {
+        pinyin: pinyin.clone(),
+        canonical_pinyin: row.canonical_pinyin.clone(),
+        word: row.word.clone(),
+        weight: row.weight,
+        source: CandidateSource::Database,
+        ..WordItem::default()
+    }
 }
 
 pub(super) enum ClonedRows<'a> {
     Full(std::slice::Iter<'a, WordItem>),
     Compact {
-        pinyin: &'a str,
-        rows: std::slice::Iter<'a, DictRow>,
+        pinyin: &'a SharedString,
+        rows: std::slice::Iter<'a, CompactRow>,
     },
 }
 
