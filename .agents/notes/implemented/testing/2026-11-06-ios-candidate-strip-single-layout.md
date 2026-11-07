@@ -14,17 +14,18 @@ Status: implemented
 
 `updateCandidateButton` 仍在 `performWithoutAnimation` 里套用 configuration、行数和宽度约束，但不再自己布局。`renderCandidateStrip` 在所有词块换完（含每个词块之后的 `CandidateStripSizing.apply`）之后，只要有词块换过字，就在一个 `performWithoutAnimation` 里对 `candidateStack` 调一次 `layoutIfNeeded`。
 
-只合并布局会改变 UIKit 解出来的宽度，所以 `makeCandidateButton` 同时把词块的水平拥抱优先级设为 990。`SymbolCandidateChipTests.testSymbolRowsStayAsNarrowAsTheirSymbolWithGlossesOn` 在只合并布局时失败：原代码 `UISV-text-width-disambiguation` 约束 0 条、栈宽 716.67、`㎥` 词块宽 39.33；只合并后这类约束 9 条、栈宽 894、`㎥` 宽 166。观察到这类约束的优先级是 952、956，宽度约束是 998、999，990 落在中间。加上之后，该用例 20 行的宽度和位置与原代码逐字节相同。
+这次改动最初基于横向栈直接排列词块的代码，只合并布局会改变 UIKit 解出来的宽度：`SymbolCandidateChipTests.testSymbolRowsStayAsNarrowAsTheirSymbolWithGlossesOn` 失败，`UISV-text-width-disambiguation` 约束从 0 条变成 9 条，栈宽 716.67 变成 894，`㎥` 词块宽 39.33 变成 166。当时把词块的水平拥抱优先级设成 990 压住它（观察到这类约束是 952、956，宽度约束是 998、999）。合并 develop 之后，[候选文字宽度与横向栈隔离](../bug-fix/2026-11-05-ios-candidate-width-solver.md)让横向栈只排列容器，这组约束不再生成，990 随之去掉：同一个原生库，上游 Swift、合并版（带 990）、去掉 990 三臂跑同一用例，20 行的宽度和位置逐字节相同，消歧约束都是 0 条，栈宽都是 716.67、824.33。
 
 ## Alternatives considered
 
 - **跳过内容没变的词块**：已经有了（`candidateButtonInputs`），但打字时每键大多数词块都换字，省不下这部分布局。
-- **其余保持原几何的办法**：两遍布局、中间 `setNeedsUpdateConstraints`、提前设置 `numberOfLines`、重写 `updateConstraints` 都试过，符号词块用例仍然失败。
+- **其余保持原几何的办法**：合并 develop 之前，两遍布局、中间 `setNeedsUpdateConstraints`、提前设置 `numberOfLines`、重写 `updateConstraints` 都试过，符号词块用例仍然失败。
+- **保留拥抱优先级 990 作为保险**：万一包装层没有覆盖到别的情况，它还能压住消歧约束。但三臂对照里它没有任何作用，留着就多一处依赖 UIKit 内部优先级值的代码，所以去掉；这个行为仍由符号词块用例守住。
 - **候选栏改用自绘或 `UICollectionView` 复用**：能连 `setConfiguration` 的开销一起去掉，但要重写词块的皮肤、释义、标记和读屏，改动面远大于这次；要等真机数据说明值得再做。
 
 ## Consequences
 
-模拟器 Release 配置，同一个原生库，只换这一处 Swift，不挂采样器，每轮重新链接，改前改后各 4 次交替（`p50 / p95`，ms，取 4 次的中位数）：
+下表是合并 develop 之前量的，当时的基线是 `e270741ee9`。模拟器 Release 配置，同一个原生库，只换这一处 Swift，不挂采样器，每轮重新链接，改前改后各 4 次交替（`p50 / p95`，ms，取 4 次的中位数）：
 
 | 用例 | 改前 | 改后 |
 |---|---|---|
@@ -44,6 +45,6 @@ Status: implemented
 
 这组基准看不到真人节奏下的开销，连续敲键时释义的防抖从不触发。按 150–300 ms 的节奏走异步路径，释义开（iOS 默认）比释义关时每键周期的主线程占用多约一倍（p50，九键 7.4 → 14.9 ms，全拼 6.9 → 12.7 ms）：按键后约 135 ms 释义到达（120 ms 防抖加查询），再做一次完整 `render`。其中九键 60 键里有 24 键候选词块横移（幅度中位数 33 pt），全拼 `nihao` 没有横移。这次没有处理：防抖是有意的设计，改法要在响应时机和词块宽度之间取舍，应先在真机上比较释义开关。
 
-回归（Debug，全新模拟器，无并行负载）：键盘 1268 项（11 跳过）、服务 124 项、共享 139 项，唯一失败是 `KeyboardViewTeardown.swift:8` 的 `NSISEngine: Not possible to remove variable`。这是[重排器内存笔记](../bug-fix/2026-11-02-ios-keyboard-reranker-memory.md)记过的销毁断言，#10859 之后仍会触发，报错落在控制器释放时碰巧在跑的用例上。同一个原生库只换这处 Swift，`NineKeyKeyboardTests` 交替跑（每臂 6 遍共 708 个用例）：原代码触发 5 次，改后 1 次，没有其他错误。次数太少，不能说明这次改动减少了它，只能说明没有增加。`verify-local.sh --quick` 退出码 1，只有三个 Android 阶段因本机缺 `javac` 和 API 35 失败，`shared apple bridge` 通过，macOS 原生编译被跳过（结果见[压缩路径页笔记](2026-11-06-compact-path-page-shared-strings.md)）。
+回归（Debug，全新模拟器，合并 develop 之后）：键盘 1369 项（11 跳过）、服务 125 项、共享 139 项，全部通过。合并之前唯一的失败是 `KeyboardViewTeardown.swift:8` 的 `NSISEngine: Not possible to remove variable`，[重排器内存笔记](../bug-fix/2026-11-02-ios-keyboard-reranker-memory.md)记过这个销毁断言；当时同一个原生库只换这处 Swift，`NineKeyKeyboardTests` 交替跑（每臂 6 遍共 708 个用例），原代码触发 5 次，改后 1 次，没有其他错误，只能说明这次改动没有增加它。[键盘根视图改用普通 UIView](../bug-fix/2026-11-05-ios-keyboard-plain-root-view.md) 删掉了 `KeyboardViewTeardown`，合并后这一轮没有再出现；只跑了一轮，不能证明断言已经根除。`verify-local.sh --quick` 的结果见[压缩路径页笔记](2026-11-06-compact-path-page-shared-strings.md)：只有 Android 阶段因本机环境失败，`shared apple bridge` 通过，macOS 原生编译被跳过。
 
-代价：拥抱优先级依赖观察到的 UIKit 内部优先级值，消歧约束本身可能还在，系统升级后可能变化，靠符号词块用例守住。被手指按过的词块换字不渐变这一项，进程内测试触发不了，原来靠模拟器录屏验收，这次没有重录；`InlineCompositionDefaultTests.testTypingRedrawsTheStripWithoutAnimations` 只守住按键重画候选条不带动画。
+代价：`updateCandidateButton` 返回时词块的几何还是旧的，要等整页换完。`renderCandidateStrip` 里目前没有在这之间读词块 `bounds`、`frame` 的代码，`CandidateStripSizing.apply` 只改约束，`naturalContentHeight` 读的是固有尺寸。被手指按过的词块换字不渐变这一项，进程内测试触发不了，原来靠模拟器录屏验收，这次没有重录；`InlineCompositionDefaultTests.testTypingRedrawsTheStripWithoutAnimations` 只守住按键重画候选条不带动画。

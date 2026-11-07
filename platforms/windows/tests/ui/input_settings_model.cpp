@@ -39,6 +39,17 @@ int main() {
         "the three punctuation and translation tabs");
 
   // 五笔选词键：各是一个英文标点，并且不同。
+  // 五笔码表版本：下拉框的顺序和名字与共享页 wubiProfileOptions 相同；不认识的存储值按 86。
+  check(wubi_profiles.size() == 3 && wubi_profiles[0].id == L"wubi86" &&
+            wubi_profiles[0].title == L"86 五笔" && wubi_profiles[1].id == L"wubi98" &&
+            wubi_profiles[1].title == L"98 五笔" && wubi_profiles[2].id == L"wubixsj" &&
+            wubi_profiles[2].title == L"新世纪五笔",
+        "the three wubi profiles in the shared order and words");
+  check(wubi_profile_index(L"wubi86") == 0 && wubi_profile_index(L"wubi98") == 1 &&
+            wubi_profile_index(L"wubixsj") == 2,
+        "each stored profile selects its own entry");
+  check(wubi_profile_index(L"wubi06") == 0 && wubi_profile_index(L"") == 0,
+        "an unknown stored profile reads as 86");
   check(valid_wubi_candidate_keys(L";", L"'"), "the default pair is valid");
   check(valid_wubi_candidate_keys(L"'", L";"), "a swapped pair is valid");
   check(valid_wubi_candidate_keys(L"[", L"~"), "brackets and tilde are punctuation");
@@ -86,13 +97,23 @@ int main() {
   check(mode(L"mention_places").title == L"@ 地名", "the places row");
 
   // 总开关关着时 Shift+字母进入的各行变灰，/ 和 @ 不受影响；地名跟着 @ 模式。
-  check(local_mode_disabled(mode(L"emoji"), false, true), "E mode greys without Shift+letter");
-  check(local_mode_disabled(mode(L"expression"), false, true), "V mode greys without Shift+letter");
-  check(!local_mode_disabled(mode(L"emoji"), true, false), "E mode is available with Shift+letter");
-  check(!local_mode_disabled(mode(L"command"), false, false), "/ mode ignores Shift+letter");
-  check(!local_mode_disabled(mode(L"mention"), false, false), "@ mode ignores Shift+letter");
-  check(local_mode_disabled(mode(L"mention_places"), true, false), "places grey without @");
-  check(!local_mode_disabled(mode(L"mention_places"), false, true), "places follow @ only");
+  check(local_mode_disabled(mode(L"emoji"), false, true, true), "E mode greys without Shift+letter");
+  check(local_mode_disabled(mode(L"expression"), false, true, true), "V mode greys without Shift+letter");
+  check(!local_mode_disabled(mode(L"emoji"), true, false, true), "E mode is available with Shift+letter");
+  check(!local_mode_disabled(mode(L"command"), false, false, true), "/ mode ignores Shift+letter");
+  check(!local_mode_disabled(mode(L"mention"), false, false, true), "@ mode ignores Shift+letter");
+  check(local_mode_disabled(mode(L"mention_places"), true, false, true), "places grey without @");
+  check(!local_mode_disabled(mode(L"mention_places"), false, true, true), "places follow @ only");
+  // 「组字后按 / 转超级简拼」只跟着超级简拼，不受 Shift+字母总开关管。
+  check(mode(L"super_jianpin_slash").default_on && !mode(L"super_jianpin_slash").shift_letter,
+        "the slash row is on by default and not a Shift+letter entry");
+  check(local_mode_disabled(mode(L"super_jianpin_slash"), true, false, false),
+        "the slash row greys without super jianpin");
+  check(!local_mode_disabled(mode(L"super_jianpin_slash"), false, false, true),
+        "the slash row ignores Shift+letter");
+  check(local_mode_has_dependents(mode(L"super_jianpin")) && local_mode_has_dependents(mode(L"mention")) &&
+            !local_mode_has_dependents(mode(L"emoji")),
+        "rows with dependents repaint");
 
   // 没有翻译服务时指令模式补一句。
   check(local_mode_description(mode(L"command"), true) == mode(L"command").description,

@@ -38,6 +38,6 @@ Status: implemented
 
 输出不变：`convert_eval` 九键句子、九键词（3000 条）、十四键句子、全拼句子、全拼词（3000 条）、语气词六组，挂着随锁资源的句子模型重排，`--dump` 全部候选与 `--report` 都与改前逐字节相同。
 
-测试：`compact_page_shares_text_storage_with_rows` 钉住存页只有 `Box` 和行容器 2 次申请、三个取页出口都只申请输出容器 1 次（与行数无关）、输出行与源行共用文本存储、整页共用一份读音、改写副本不影响缓存页。两条会话分配预算按推导收紧：`ni` 后输入 `h` 存 5 行冷页少复制 5 × 2 份（98 → 88），光标处输入两次命中 5 行压缩页少 2 × 5 × 6 次申请（164 → 104）。engine 单测 3001 项、golden 31 项及其余集成测试通过，input-runtime 457 项通过，engine 的 fmt 与 Clippy（`--all-targets -D warnings`）通过。这次改动和同一天的词库行、iOS 候选栏改动合在一起跑过一次 `verify-local.sh --quick`，退出码 1：失败的只有 `android haptics pending`、`android update job cancellation`、`android host java` 三个阶段，本机没有 `javac` 和 Android API 35，这几处改动也不含 Android 文件，但没有在干净的 develop 上对照过；另有 24 个阶段被跳过，包括 macOS 原生编译。设备验收没有跑。
+测试：`compact_page_shares_text_storage_with_rows` 钉住存页只有 `Box` 和行容器 2 次申请、三个取页出口都只申请输出容器 1 次（与行数无关）、输出行与源行共用文本存储、整页共用一份读音、改写副本不影响缓存页。两条会话分配预算按推导收紧：`ni` 后输入 `h` 存 5 行冷页少复制 5 × 2 份（98 → 88），光标处输入两次命中 5 行压缩页少 2 × 5 × 6 次申请（164 → 104）。engine 单测 3001 项、golden 31 项及其余集成测试通过，input-runtime 457 项通过，engine 的 fmt 与 Clippy（`--all-targets -D warnings`）通过。这次改动和同一天的词库行、iOS 候选栏改动合在一起、再合并 develop 之后跑过 `verify-local.sh --quick`，退出码 1：失败的只有 `android haptics pending`、`android shuangpin host hints`、`android update job cancellation`、`android host java` 四个阶段，本机没有 `javac` 和 Android API 35，这几处改动也不含 Android 文件，但没有在干净的 develop 上对照过；macOS 原生编译等阶段被跳过。`msime-host-api` 的 `listing_reports_every_pack_and_checks_the_state_root` 失败，干净的 develop 上同样失败（`local-translation` 包不在期望列表里）。设备验收没有跑。
 
 代价：取出的行与缓存页共用存储，调用方原地改写会触发一次写时复制；以前这份复制在取页时就已经付过，所以不会更贵。

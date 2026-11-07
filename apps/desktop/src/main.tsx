@@ -312,6 +312,8 @@ const client: SettingsClient = {
   readAppReleaseDate: () => invoke<string>("app_release_date"),
   resolveFontFamilies: (names) => invoke("resolve_font_families", { names }),
   scanSkinCatalog: () => invoke("scan_skin_catalog"),
+  // 「主题」页皮肤卡片上的「删除」：规则在 client-services 的 `candidate_sync::delete_unselected`，页面只给文件夹名。
+  deleteSkin: (id) => invoke("delete_skin", { id }),
   // 「制作皮肤」：两条命令都走 client-services 的 `skin::candidate_editor`，失败以 `{code, detail}` 拒绝；装进哪个目录由宿主决定。
   candidateSkinEditor: {
     check: ({ packageId, manifest, files }) =>
@@ -944,10 +946,8 @@ function DesktopSettings() {
                     chooseAvatar: () => invoke<AccountProfile | null>("account_choose_avatar"),
                     removeAvatar: () => invoke<AccountProfile>("account_remove_avatar"),
                     qqLinks,
-                    // 设置同步接在 Windows 和 Linux 的账号会话上；macOS 由输入法自己的账号窗口同步它的原生设置。
-                    ...(host.platform === "windows" || host.platform === "linux"
-                      ? { settingsSync: createDesktopSettingsSync(invoke) }
-                      : {}),
+                    // 设置同步接在三个桌面宿主的账号会话上。macOS 的账号入口走这个共享页，原生账号窗口只是设置应用起不来时的回退（#10747）。
+                    settingsSync: createDesktopSettingsSync(invoke, host.platform),
                   } satisfies AccountClient,
                   communityCandidateSkins: createDesktopCandidateSkinCommunity(invoke),
                   communityPlugins: createDesktopPluginCommunity(invoke),

@@ -82,7 +82,7 @@ public:
     if (!modes.contains("shift_letter_entry") || !modes.at("shift_letter_entry").is_boolean()) return false;
     for (const auto& mode : input::local_modes) {
       const auto key = id(mode.id);
-      if (!modes.contains(key) && (key == "chaizi" || key == "symbol")) continue;
+      if (!modes.contains(key) && (key == "chaizi" || key == "symbol" || key == "super_jianpin_slash")) continue;
       if (!modes.contains(key) || !modes.at(key).is_boolean()) return false;
     }
     const auto& fuzzy = preferences.at("fuzzy_pinyin");
@@ -141,8 +141,9 @@ public:
     EnableWindow(shift_, enabled);
     const bool shift = modes_value_.value("shift_letter_entry", true);
     const bool mention = modes_value_.value("mention", false);
+    const bool super_jianpin = modes_value_.value("super_jianpin", true);
     for (size_t index = 0; index < modes_.size(); ++index)
-      if (modes_[index]) EnableWindow(modes_[index], enabled && !input::local_mode_disabled(input::local_modes[index], shift, mention));
+      if (modes_[index]) EnableWindow(modes_[index], enabled && !input::local_mode_disabled(input::local_modes[index], shift, mention, super_jianpin));
     EnableWindow(fuzzy_, enabled);
     const bool fuzzy = fuzzy_value_.value("enabled", false);
     for (const auto control : rules_controls_) EnableWindow(control, enabled && fuzzy);
@@ -155,7 +156,7 @@ public:
 
   Command command(WPARAM event) const {
     const int control = LOWORD(event);
-    if (control >= helpcode_first && control < helpcode_first + 6)
+    if (control >= helpcode_first && control < helpcode_first + HelpcodeForm::control_count)
       return {true, helpcode_.command(event), false};
     const int notification = HIWORD(event);
     const bool mode = control >= local_mode_first && control < local_mode_first + static_cast<int>(modes_.size());

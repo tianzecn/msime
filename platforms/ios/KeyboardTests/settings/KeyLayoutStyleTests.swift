@@ -219,7 +219,7 @@ final class KeyLayoutStyleTests: XCTestCase {
     XCTAssertEqual(TouchBottomRowLayout.nineKeyStandardKeyCount(globe: true, language: false), 5)
   }
 
-  /// 手机的数字行是整整一排：五排键加四个排间距；26 键收紧的键帽省下的高度分到每排上下，字母键仍是 44pt。iPad 的第五排仍只看「数字行与 Tab 键」。
+  /// 手机的数字行是整整一排：五排键加四个排间距；26 键使用 44pt 字母键帽和用户设置的排距。iPad 的第五排仍只看「数字行与 Tab 键」。
   func testPhoneNumberRowAddsAFullRow() {
     let phone = KeyboardFormFactor.phone
     XCTAssertEqual(phone.keyRows(numberRow: false, phoneNumberRow: true), 5)
@@ -228,10 +228,7 @@ final class KeyLayoutStyleTests: XCTestCase {
     // 2 + 50 + 4 + 5 × 52 + 4 × 7 + 4。
     XCTAssertEqual(phone.keyboardHeight(topRow: 50, rowSpacing: 7, landscape: false, handwriting: false, phoneNumberRow: true), 348)
     XCTAssertEqual(phone.keyboardHeight(topRow: 50, rowSpacing: 11, landscape: false, handwriting: false, letterKeys: true,
-                                        phoneNumberRow: true), 348)
-    // 26 键每排省下的 8pt 一半在上一半在下：上下留白 4pt，排间距多 4 + 4pt，五排加起来正好补回 5 × 8pt。
-    XCTAssertEqual(2 * KeyboardFormFactor.phoneLetterVerticalPadding
-                     + 4 * (KeyboardFormFactor.phoneLetterRowPadding + KeyboardFormFactor.phoneLetterSpareRowPadding), 5 * 8)
+                                        phoneNumberRow: true), 364)
     XCTAssertEqual(KeyboardHeightPercent.portraitKeyBlockHeight(tablet: false, numberRow: false, rowSpacing: 7, phoneNumberRow: true),
                    5 * 52 + 4 * 7)
   }
@@ -478,10 +475,10 @@ final class KeyLayoutStyleTests: XCTestCase {
         let digit = try button("numberRowKey1", in: controller)
         func frame(_ view: UIView) -> CGRect { view.convert(view.bounds, to: controller.view) }
         XCTAssertEqual(frame(digit).minY - frame(strip).maxY,
-                       KeyboardFormFactor.phone.topRowGap + KeyboardFormFactor.phoneLetterVerticalPadding, accuracy: 0.5)
+                       KeyboardFormFactor.phone.topRowGap
+                         + KeyboardFormFactor.phoneLetterVerticalPadding(rows: 5), accuracy: 0.5)
         XCTAssertEqual(frame(letter).minY - frame(digit).maxY,
-                       CGFloat(KeyboardLayoutPreference.rowSpacing) + KeyboardFormFactor.phoneLetterRowPadding
-                         + KeyboardFormFactor.phoneLetterSpareRowPadding, accuracy: 0.5)
+                       CGFloat(KeyboardLayoutPreference.rowSpacing), accuracy: 0.5)
         attach(controller, "26 键 数字行")
       }
       // 数字页（借用的九宫格）上补充行占住这一排。
@@ -1112,14 +1109,12 @@ final class KeyLayoutStyleTests: XCTestCase {
       XCTAssertEqual(tall.nineKeyControls, ["⌫", "分词"], "\(scheme)")
     }
 
-    // 14/18 键画各自的字母格，五笔 14 键第三排左端是 符。
+    // 14/18 键画各自的字母格。第三排左端拼音和五笔一样画空闲时的「符」，`KeyboardPreviewFace` 因此不再区分两者。
     let quanpinEighteen = KeyboardPreviewFace(.eighteenKey, shuangpinLayout: .twentySixKey, wubiLayout: .twentySixKey)
     XCTAssertEqual(quanpinEighteen.letterGrid, .eighteenKey)
-    XCTAssertTrue(quanpinEighteen.gridSplitsSyllables)
     XCTAssertEqual(KeyboardPreviewFace(.shuangpin, shuangpinLayout: .fourteenKey, wubiLayout: .twentySixKey).letterGrid, .fourteenKey)
     let wubiFourteen = KeyboardPreviewFace(.wubi, shuangpinLayout: .eighteenKey, wubiLayout: .fourteenKey)
     XCTAssertEqual(wubiFourteen.letterGrid, .fourteenKey)
-    XCTAssertFalse(wubiFourteen.gridSplitsSyllables)
     XCTAssertFalse(wubiFourteen.nineKey)
   }
 
@@ -2281,10 +2276,11 @@ final class KeyLayoutStyleTests: XCTestCase {
       .sorted { $0.frame.minY < $1.frame.minY }
   }
 
-  /// 内存里的一份文档：测试宿主里的 `textDocumentProxy` 没有文档，上屏看不到（见 `EmailSuffixKeyboardTests`）。光标总在末尾，`adjustTextPosition` 只记下挪了几格。
+  /// 内存里的一份文档：测试宿主里的 `textDocumentProxy` 没有文档，上屏看不到（见 `EmailSuffixKeyboardTests`）。光标总在末尾，`adjustTextPosition` 只记下挪了几格。`text` 只放已上屏的文字，标记文本另记在 `marked`，取消标记时并进 `text`，插入时被替换掉，与系统文本框相同。
   @MainActor
   private final class SidebarDocument: NSObject, UITextDocumentProxy {
     var text = ""
+    var marked = ""
     var caretMoves: [Int] = []
     var documentContextBeforeInput: String? { text }
     var documentContextAfterInput: String? { nil }
@@ -2292,11 +2288,14 @@ final class KeyLayoutStyleTests: XCTestCase {
     var documentInputMode: UITextInputMode? { nil }
     var documentIdentifier = UUID()
     var hasText: Bool { !text.isEmpty }
-    func insertText(_ inserted: String) { text += inserted }
+    func insertText(_ inserted: String) { marked = ""; text += inserted }
     func deleteBackward() { if !text.isEmpty { text.removeLast() } }
     func adjustTextPosition(byCharacterOffset offset: Int) { caretMoves.append(offset) }
-    func setMarkedText(_ markedText: String, selectedRange: NSRange) {}
-    func unmarkText() {}
+    func setMarkedText(_ markedText: String, selectedRange: NSRange) { marked = markedText }
+    func unmarkText() {
+      text += marked
+      marked = ""
+    }
   }
 
   private static let proxySelector = #selector(getter: UIInputViewController.textDocumentProxy)

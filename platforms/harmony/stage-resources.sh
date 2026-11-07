@@ -20,8 +20,15 @@ cp resources/licenses/Zinnia-LICENSE.txt "$handwriting_staged/"
 resource_dir=${1:?usage: stage-resources.sh <verified-resource-directory> [offline-glosses-directory] [language-dictionaries-directory] [wordbooks-directory] [pronunciations-directory] [target-pronunciations-directory]}
 resource_dir=$(cd "$resource_dir" && pwd)
 # The directory has to match the lock exactly, down to containing no extra file, because the same
-# check runs again on the device inside prepare_host. Failing here is far cheaper than failing there.
-artifacts=$(cargo run --quiet -p msime-client-core --example verify_resources --locked -- "$resource_dir")
+# check runs again on the device inside prepare_host. Japanese and Wubi are optional on HarmonyOS:
+# they are published through the resource-pack service after installation, so the HAP only carries
+# the resources every input scheme needs. Set MSIME_HARMONY_OMIT_ON_DEMAND=0 for a development HAP
+# that intentionally bundles both optional groups.
+verify_args=()
+if [ "${MSIME_HARMONY_OMIT_ON_DEMAND:-1}" = 1 ]; then
+  verify_args+=(--omit-on-demand --platform ohos)
+fi
+artifacts=$(cargo run --quiet -p msime-client-core --example verify_resources --locked -- "${verify_args[@]}" "$resource_dir")
 staged="$repo_root/platforms/harmony/entry/src/main/resources/resfile/engine"
 rm -rf "$staged"
 mkdir -p "$staged"
@@ -34,7 +41,7 @@ done
 cp resources/helpcodes/ENGINE-NOTICE.md "$staged/helpcodes/NOTICE.md"
 cp resources/helpcodes/NOTICE.md "$staged/helpcodes/NOTICE-jiajia.md"
 cp resources/helpcodes/NOTICE-wubi86.md "$staged/helpcodes/NOTICE-wubi86.md"
-cargo run --quiet -p msime-client-core --example verify_resources --locked -- "$staged" >/dev/null
+cargo run --quiet -p msime-client-core --example verify_resources --locked -- "${verify_args[@]}" "$staged" >/dev/null
 echo "Staged for the HAP: $staged"
 
 # Licences of what the native library carries that its own notices do not cover: the input engine embeds the Korean Hanja table from libhangul's data/hanja/hanja.txt, whose BSD-3-Clause licence requires the notice in binary distributions, its Cantonese and Zhuyin schemes take their syllables and words from data derived from rime-cantonese (CC BY 4.0) and libchewing-data (LGPL-2.1-or-later), and its Stroke scheme takes its stroke orders from rime-stroke (LGPL-3.0, with the CNS11643 attribution), whose notices travel with every engine build even where those schemes are not offered. Beside the engine directory rather than in it, which the lock check above would reject; resfile extracts it to context.resourceDir/licenses.
@@ -66,9 +73,19 @@ cp resources/licenses/rime-wanxiang-CC-BY-4.0.txt "$licenses_staged/"
 cp resources/licenses/msime-engine-dictionary-NOTICE.md "$licenses_staged/"
 # 资源目录里的整句重排模型 sentence-model.safetensors 是 chinese-ime-lm 的 model-v1（Apache-2.0）：许可证全文、上游 NOTICE 与训练语料要求的署名都在这份各平台共用的文件里。
 cp resources/licenses/sentence-model-Apache-2.0.txt "$licenses_staged/"
-# 水杉输入法本身以 GPL-3.0-only 发布，resfile/engine 里的 msime-pinyin.db 含 rime-ice 的 GPL-3.0 数据；GPL-3.0 第 4、6 条要求随目标代码附上许可证全文，所以仓库根目录的 LICENSE 以 GPL-3.0.txt 随 HAP 分发，与 macOS 包和引擎 C 库数据包里的名字相同。
+# 水杉输入法本身以 GPL-3.0-only 发布，resfile/engine 里的 msime-pinyin.db 含 rime-ice 的 GPL-3.0 数据，msime-wubi.db 的新世纪五笔单字码取自 byujiang/wubi06_rime（GPL-3.0，来源与许可的情况写在上面那份 NOTICE 里）；GPL-3.0 第 4、6 条要求随目标代码附上许可证全文，所以仓库根目录的 LICENSE 以 GPL-3.0.txt 随 HAP 分发，与 macOS 包和引擎 C 库数据包里的名字相同。
 cp LICENSE "$licenses_staged/GPL-3.0.txt"
 echo "Licences staged for the HAP: $licenses_staged"
+
+# 整句联想「增强」逐键重排的手机档 ONNX 模型（chinese-ime-lm 的 rerank-v2：6x256，约 8 MB），按 resources/rerank-model.lock.json 下载核对后放在 resfile/rerank-model-small：放在 engine 目录旁边而不是里面，因为放进去会被上面的锁文件校验拒绝。resfile 把它解压到 context.resourceDir/rerank-model-small，键盘在 HostOptions 的 rerank_models 里写 context.resourceDir，host-api 从那里加载（build-native.sh 编的 host 库打开了 onnx-rerank）；ONNX Runtime 只读文件，不像 SQLite 那样要在只读的安装目录里加锁，所以不复制到 filesDir。8x448 不带：与 Android 一样是手机，大模型多 31 MB，还没有量过哪台鸿蒙手机能在 10 ms 的换档线内跑完它。没有模型时退回 engine 里随包的 sentence-model.safetensors。
+rerank_source=$(python3 scripts/fetch_rerank_model.py)
+rerank_staged="$repo_root/platforms/harmony/entry/src/main/resources/resfile/rerank-model-small"
+rm -rf "$rerank_staged"
+cp -R "$rerank_source/rerank-model-small" "$rerank_staged"
+echo "Keystroke rerank model staged for the HAP: $rerank_staged"
+# 模型的许可证全文、上游 NOTICE 与训练语料要求的署名（Apache-2.0 第 4(a)、4(d) 条），以及 libmsime_host_api.so 静态链接的精简 ONNX Runtime 的 MIT 许可证和它的第三方声明，与 Android 随原生库分发的是同一份。
+cp resources/licenses/rerank-model-Apache-2.0.txt "$licenses_staged/"
+cp platforms/linux/data/licenses/onnxruntime-MIT.txt platforms/linux/data/licenses/onnxruntime-ThirdPartyNotices.txt "$licenses_staged/"
 
 # 内置音效包，由 scripts/generate_sound_packs.py 合成。放在 engine 目录旁边而不是里面，因为放进去会被上面的锁文件校验拒绝；resfile 会把它们解压到 context.resourceDir/sound-packs，也就是键盘告诉 client-services 的内置包根目录。
 sound_packs_staged="$repo_root/platforms/harmony/entry/src/main/resources/resfile/sound-packs"

@@ -2,6 +2,7 @@
 #include "../../common/HostApiString.h"
 #include "../../common/CrashRecorder.h"
 #include "key_sound_render.h"
+#include <hilog/log.h>
 #include <napi/native_api.h>
 #include <zlib.h>
 #include <cerrno>
@@ -419,8 +420,12 @@ static napi_value SnapshotRestore(napi_env env, napi_callback_info info) {
 TEXT_ENTRY(VoiceHotwordCorrect, msime_client_voice_hotword_correct)
 // 本地模型最终文本里的汉字数字改写成数字；纯函数，只改写不自带 ITN 的 kind。
 TEXT_ENTRY(VoiceNormalizeNumbers, msime_client_voice_normalize_numbers)
+// 识别结果上屏前按共享偏好处理标点；只由最终结果路径调用。
+TEXT_ENTRY(VoicePunctuation, msime_client_voice_punctuation)
 TEXT_ENTRY(VoiceLocalModels, msime_client_voice_local_models)
 TEXT_ENTRY(VoiceLocalModelCancel, msime_client_voice_local_model_cancel)
+TEXT_ENTRY(ResourcePacks, msime_client_resource_packs)
+TEXT_ENTRY(ResourcePackRemove, msime_client_resource_pack_remove)
 
 static void rejectWith(napi_env env, napi_deferred deferred, const char *text) {
     napi_value message = nullptr;
@@ -1050,6 +1055,129 @@ static napi_value VoiceLocalModelInstall(napi_env env, napi_callback_info info) 
     return promise;
 }
 
+// 资源包进度和本地语音模型共用同一条 ArkWeb 回调通道，但 C ABI 的回调把阶段作为单独
+// 参数传入。资源包 id 只允许固定的 ASCII 名字，安装请求里的值因此可以安全地取出用于
+// 组成页面事件；真正的校验仍由 Rust 入口完成。
+static std::string resourcePackId(const std::string &request) {
+    const std::string key = "\"pack\":\"";
+    const size_t begin = request.find(key);
+    if (begin == std::string::npos) return {};
+    const size_t start = begin + key.size();
+    const size_t end = request.find('"', start);
+    if (end == std::string::npos || end - start > 128) return {};
+    return request.substr(start, end - start);
+}
+
+struct ResourcePackInstallWork {
+    napi_async_work work = nullptr;
+    napi_deferred deferred = nullptr;
+    napi_threadsafe_function progress = nullptr;
+    std::string request;
+    std::string pack;
+    char *result = nullptr;
+};
+
+static void callResourcePackProgress(napi_env env, napi_value callback, void *, void *data) {
+    auto *document = static_cast<std::string *>(data);
+    if (env != nullptr && callback != nullptr) {
+        napi_value argument = nullptr;
+        napi_value receiver = nullptr;
+        if (napi_create_string_utf8(env, document->data(), document->size(), &argument) == napi_ok
+                && napi_get_undefined(env, &receiver) == napi_ok) {
+            napi_call_function(env, receiver, callback, 1, &argument, nullptr);
+        }
+    }
+    delete document;
+}
+
+static void reportResourcePackProgress(void *context, const char *phase, uint64_t downloaded,
+                                       uint64_t total) {
+    auto *work = static_cast<ResourcePackInstallWork *>(context);
+    if (work->progress == nullptr || phase == nullptr) return;
+    const std::string document = "{\"id\":\"" + work->pack + "\",\"stage\":\""
+        + phase + "\",\"downloaded\":" + std::to_string(downloaded)
+        + ",\"total\":" + std::to_string(total) + "}";
+    auto *owned = new std::string(document);
+    if (napi_call_threadsafe_function(work->progress, owned, napi_tsfn_nonblocking) != napi_ok) {
+        delete owned;
+    }
+}
+
+static void executeResourcePackInstall(napi_env, void *data) {
+    auto *work = static_cast<ResourcePackInstallWork *>(data);
+    work->result = msime_client_resource_pack_install(
+        reinterpret_cast<const uint8_t *>(work->request.data()), work->request.size(),
+        work->progress != nullptr ? reportResourcePackProgress : nullptr, work);
+}
+
+static void completeResourcePackInstall(napi_env env, napi_status status, void *data) {
+    auto *work = static_cast<ResourcePackInstallWork *>(data);
+    if (work->progress != nullptr) {
+        napi_release_threadsafe_function(work->progress, napi_tsfn_release);
+        work->progress = nullptr;
+    }
+    settleVoicePromise(env, status, work->deferred, work->result,
+        "Resource pack install worker failed");
+    napi_delete_async_work(env, work->work);
+    delete work;
+}
+
+static napi_value ResourcePackInstall(napi_env env, napi_callback_info info) {
+    size_t count = 2;
+    napi_value argv[2] = { nullptr, nullptr };
+    if (napi_get_cb_info(env, info, &count, argv, nullptr, nullptr) != napi_ok || count < 1) {
+        return invalid(env, "Expected a resource pack install request");
+    }
+    auto *work = new ResourcePackInstallWork();
+    if (!argumentText(env, argv[0], work->request)) {
+        delete work;
+        return invalid(env, "Expected a resource pack install request");
+    }
+    work->pack = resourcePackId(work->request);
+    napi_value resource = nullptr;
+    if (napi_create_string_utf8(env, "MSIME resource pack install", NAPI_AUTO_LENGTH,
+            &resource) != napi_ok) {
+        delete work;
+        return invalid(env, "Unable to create resource pack install worker");
+    }
+    napi_valuetype callbackType = napi_undefined;
+    if (count >= 2 && napi_typeof(env, argv[1], &callbackType) == napi_ok
+            && callbackType == napi_function
+            && napi_create_threadsafe_function(env, argv[1], nullptr, resource, 0, 1, nullptr,
+                nullptr, nullptr, callResourcePackProgress, &work->progress) != napi_ok) {
+        delete work;
+        return invalid(env, "Unable to create resource pack progress channel");
+    }
+    napi_value promise = nullptr;
+    if (napi_create_promise(env, &work->deferred, &promise) != napi_ok
+            || napi_create_async_work(env, nullptr, resource, executeResourcePackInstall,
+                completeResourcePackInstall, work, &work->work) != napi_ok) {
+        if (work->progress != nullptr) napi_release_threadsafe_function(work->progress, napi_tsfn_release);
+        delete work;
+        return invalid(env, "Unable to create resource pack install worker");
+    }
+    if (napi_queue_async_work(env, work->work) != napi_ok) {
+        napi_delete_async_work(env, work->work);
+        if (work->progress != nullptr) napi_release_threadsafe_function(work->progress, napi_tsfn_release);
+        delete work;
+        return invalid(env, "Unable to queue resource pack install worker");
+    }
+    return promise;
+}
+
+static napi_value ResourcePackCancel(napi_env env, napi_callback_info info) {
+    std::vector<napi_value> argv;
+    std::string pack;
+    if (!arguments(env, info, 1, argv) || !argumentText(env, argv[0], pack)
+            || pack.size() > 256) {
+        napi_value result = nullptr;
+        return napi_get_undefined(env, &result) == napi_ok ? result : nullptr;
+    }
+    msime_client_resource_pack_cancel(reinterpret_cast<const uint8_t *>(pack.data()), pack.size());
+    napi_value result = nullptr;
+    return napi_get_undefined(env, &result) == napi_ok ? result : nullptr;
+}
+
 // Removing a model recursively deletes a user-downloaded directory that can be larger than a
 // gigabyte. Keep the filesystem walk off the ArkTS thread just like installation; the short
 // cancel call remains synchronous so it can set the native cancellation flag immediately.
@@ -1241,9 +1369,22 @@ static napi_value ResolveOnlineCandidates(napi_env env, napi_callback_info info)
         return response(env, call(handle));                                                         \
     }
 
+static napi_value PollSettledRerank(napi_env env, napi_callback_info info) {
+    std::vector<napi_value> argv;
+    uint64_t handle = 0;
+    uint64_t token = 0;
+    bool accept = false;
+    if (!arguments(env, info, 3, argv) || !argumentHandle(env, argv[0], handle)
+            || !argumentHandle(env, argv[1], token) || !argumentFlag(env, argv[2], accept)) {
+        return invalid(env, "Expected a session handle, a rerank token and a boolean");
+    }
+    return response(env, msime_client_poll_settled_rerank(handle, token, accept));
+}
+
 HANDLE_ENTRY(SnapshotDiscard, msime_client_snapshot_discard)
 HANDLE_ENTRY(View, msime_client_view)
 HANDLE_ENTRY(ResetCache, msime_client_reset_cache)
+HANDLE_ENTRY(StartSettledRerank, msime_client_start_settled_rerank)
 HANDLE_ENTRY(AllCandidates, msime_client_all_candidates)
 HANDLE_ENTRY(TranslationQuery, msime_client_translation_query)
 HANDLE_ENTRY(Destroy, msime_client_destroy)
@@ -1843,6 +1984,8 @@ static napi_value Init(napi_env env, napi_value exports) {
         ENTRY("releaseGlossCaches", ReleaseGlossCaches),
         ENTRY("englishCompletions", EnglishCompletions),
         ENTRY("resetCache", ResetCache),
+        ENTRY("startSettledRerank", StartSettledRerank),
+        ENTRY("pollSettledRerank", PollSettledRerank),
         ENTRY("translationGlossSave", TranslationGlossSave),
         ENTRY("translationPlan", TranslationPlan),
         ENTRY("googleLoopback", GoogleLoopback),
@@ -1953,10 +2096,15 @@ static napi_value Init(napi_env env, napi_value exports) {
         ENTRY("voiceHotwords", VoiceHotwords),
         ENTRY("voiceHotwordCorrect", VoiceHotwordCorrect),
         ENTRY("voiceNormalizeNumbers", VoiceNormalizeNumbers),
+        ENTRY("voicePunctuation", VoicePunctuation),
         ENTRY("voiceLocalModels", VoiceLocalModels),
         ENTRY("voiceLocalModelInstall", VoiceLocalModelInstall),
         ENTRY("voiceLocalModelCancel", VoiceLocalModelCancel),
         ENTRY("voiceLocalModelRemove", VoiceLocalModelRemove),
+        ENTRY("resourcePacks", ResourcePacks),
+        ENTRY("resourcePackInstall", ResourcePackInstall),
+        ENTRY("resourcePackCancel", ResourcePackCancel),
+        ENTRY("resourcePackRemove", ResourcePackRemove),
         ENTRY("doubaoEncodeFrame", DoubaoEncodeFrame),
         ENTRY("doubaoDecodeFrame", DoubaoDecodeFrame),
     };
@@ -1977,6 +2125,20 @@ static napi_module client_module = {
     .reserved = { nullptr },
 };
 
+// host-api 自己恢复的失败（音效包、整句模型读不了等）和整句联想「增强」挂上的是哪一档逐键重排（`keyboard reranker onnx small`、`keyboard reranker bundled model`、`keyboard reranker over budget` 等）没有出口时写 stderr，鸿蒙应用进程的 stderr 没人读，装好以后看不出键盘用的是哪个模型。这里转进 hilog（domain 与 ArkTS 侧 KeyboardLog 相同，标签 MSIMEHost），写成 `host_api: <类别>: <细节>`：类别是冒号前固定的英文短语，按 %{public} 写；细节可能带路径和错误原文，按 %{private} 写，正式设备上 hilog 把它记成 <private>，与 Android、iOS 只留类别相同，只有关掉 hilog 隐私开关的调试设备才看得到自测的毫秒数。按 msime_client.h 的约定，这个出口可能在任何线程上被调用，不阻塞、不回调 host-api。
+static void ForwardHostDiagnostic(const char *line) {
+    if (line == nullptr) return;
+    const char *colon = std::strchr(line, ':');
+    size_t length = colon != nullptr ? static_cast<size_t>(colon - line) : std::strlen(line);
+    if (length == 0 || length > 200) return;
+    const std::string category(line, length);
+    const char *detail = colon != nullptr ? colon + 1 : "";
+    while (*detail == ' ') ++detail;
+    OH_LOG_Print(LOG_APP, LOG_INFO, 0x0051, "MSIMEHost", "host_api: %{public}s: %{private}s", category.c_str(), detail);
+}
+
 extern "C" __attribute__((constructor)) void RegisterClientModule(void) {
+    // 在第一个会话之前登记，会话建立时写的那一行也收得到；设置应用和键盘扩展各自加载这个模块，各登记一次。
+    msime_client_set_diagnostic_sink(ForwardHostDiagnostic);
     napi_module_register(&client_module);
 }

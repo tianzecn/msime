@@ -307,6 +307,9 @@ fn capabilities_describe_each_host() {
     assert!(macos.app_logo);
     assert!(windows.app_logo);
     assert!(linux.app_logo);
+    assert!(macos.traditional_chinese_variants);
+    assert!(linux.traditional_chinese_variants);
+    assert!(!windows.traditional_chinese_variants);
     // 只有向会话报告大写锁定的宿主提供「大写锁定时使用英文标点」，目前是 macOS 和 Linux；快捷短语编码进普通候选也是这两个。
     for platform in [
         HostPlatform::Windows,
@@ -644,6 +647,17 @@ fn harmony_groups_with_mobile_hosts_and_claims_nothing_unwritten() {
     assert!(HostCapabilities::for_platform(HostPlatform::Macos).shuangpin_preedit);
     // 候选窗的预编辑行和 TIP 的行内组字都取 Engine 的 preedit，原始按键与展开拼音的差别在 Windows 上看得见。
     assert!(HostCapabilities::for_platform(HostPlatform::Windows).shuangpin_preedit);
+    // Android 把 Engine 的 preedit 写进输入框（`CandidatePreeditStylePolicy.inlineSpelling`），关掉原始按键后双拼写的是展开的拼音、粤语双拼写的是展开的粤拼（#10557），所以六个宿主都给这一项。
+    for platform in [
+        HostPlatform::Windows,
+        HostPlatform::Macos,
+        HostPlatform::Linux,
+        HostPlatform::Android,
+        HostPlatform::Harmony,
+        HostPlatform::Ios,
+    ] {
+        assert!(HostCapabilities::for_platform(platform).shuangpin_preedit);
+    }
     // 双拼键位图由 macOS、Windows 和 Linux（X11 客户端）画。
     assert!(HostCapabilities::for_platform(HostPlatform::Macos).shuangpin_keymap_hint);
     assert!(HostCapabilities::for_platform(HostPlatform::Windows).shuangpin_keymap_hint);
@@ -698,6 +712,16 @@ fn harmony_groups_with_mobile_hosts_and_claims_nothing_unwritten() {
         HostPlatform::Harmony,
     ] {
         assert!(HostCapabilities::for_platform(platform).voice_stream_preedit);
+    }
+    assert!(HostCapabilities::for_platform(HostPlatform::Harmony).voice_punctuation);
+    for platform in [
+        HostPlatform::Windows,
+        HostPlatform::Macos,
+        HostPlatform::Linux,
+        HostPlatform::Android,
+        HostPlatform::Ios,
+    ] {
+        assert!(!HostCapabilities::for_platform(platform).voice_punctuation);
     }
     // Drawn from the input method's status-bar panel, which scales itself by the shared
     // scale and font size, hides the buttons the user turned off, and opens the emoji panel

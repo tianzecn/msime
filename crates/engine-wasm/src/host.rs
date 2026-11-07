@@ -1387,6 +1387,7 @@ fn session_options(scheme: Scheme, paths: RuntimePaths) -> SessionOptions {
         emoji: false,
         kaomoji: false,
         super_jianpin: false,
+        super_jianpin_slash: false,
         temporary_english: false,
         temporary_japanese: false,
         expression: false,
@@ -1498,6 +1499,8 @@ mod tests {
         );
         assert_eq!(Scheme::parse("cantonese"), None);
         assert_eq!(Scheme::parse("wubi98"), None);
+        // 网页只有 86 五笔，新世纪不开放。
+        assert_eq!(Scheme::parse("wubixsj"), None);
         assert_eq!(Scheme::parse("shuangpin"), None);
         assert_eq!(Scheme::parse(""), None);
     }
